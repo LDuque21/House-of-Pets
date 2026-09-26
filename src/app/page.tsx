@@ -6,7 +6,7 @@ export default function Home() {
     <div className="flex flex-1 items-center justify-center">
       <main className="text-center">
         <h1 className="text-2xl font-semibold">House of Pets</h1>
-        <p className="mt-2 text-zinc-500">Scaffold running. Build starts here.</p>
+        <p className="mt-2 text-muted-foreground">Personalized care plans for your pets.</p>
         <div className="mt-6 flex items-center justify-center gap-4">
           <SignedOut>
             <Link href="/auth/sign-in" className="underline">
@@ -17,8 +17,8 @@ export default function Home() {
             </Link>
           </SignedOut>
           <SignedIn>
-            <Link href="/account" className="underline">
-              Account
+            <Link href="/pets" className="underline">
+              Your pets
             </Link>
             <UserButton size="icon" />
           </SignedIn>
