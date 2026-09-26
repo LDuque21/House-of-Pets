@@ -20,7 +20,7 @@ export default function Home() {
             <Link href="/account" className="underline">
               Account
             </Link>
-            <UserButton />
+            <UserButton size="icon" />
           </SignedIn>
         </div>
       </main>
