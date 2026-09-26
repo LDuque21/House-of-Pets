@@ -1,4 +1,4 @@
-# Pet Care Hub
+# House of Pets
 
 Personalized pet care plans (diet, hygiene, health, insurance), generated per-pet from a photo or description, plus a derived task calendar. Built for ShellHacks 2026.
 
