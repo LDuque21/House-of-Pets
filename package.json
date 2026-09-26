@@ -6,9 +6,12 @@
     "dev": "cross-env NEXT_TELEMETRY_DISABLED=1 next dev",
     "build": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "cross-env NEXT_TELEMETRY_DISABLED=1 next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push": "node scripts/apply-schema.mjs"
   },
   "dependencies": {
+    "@neon/config": "^1.8.2",
+    "@neon/env": "^1.4.7",
     "next": "^16.3.6",
     "pg": "^8.23.0",
     "react": "^19.3.0",
