@@ -1,4 +1,4 @@
--- Pet Care Hub schema (PostgreSQL / Neon)
+-- House of Pets schema (PostgreSQL / Neon)
 -- Run once against a fresh database: psql "$DATABASE_URL" -f schema.sql
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

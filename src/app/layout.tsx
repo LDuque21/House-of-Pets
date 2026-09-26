@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pet Care Hub",
+  title: "House of Pets",
   description: "Personalized pet care plans, generated for your pet.",
 };
 

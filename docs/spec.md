@@ -1,4 +1,6 @@
-# Pet Care Hub — Project Spec
+# House of Pets — Project Spec
+
+_(Originally drafted under the working title "Pet Care Hub"; renamed after the GitHub repo was created. Content below is otherwise unchanged.)_
 
 **Event:** ShellHacks 2026 (deadline Sep 27, 11:00am EDT)
 **Target challenges:** Gemini API (primary), Microsoft (secondary — core experience must NOT be a chatbot), stackable: DigitalOcean, GoDaddy Registry
