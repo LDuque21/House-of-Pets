@@ -1,12 +1,18 @@
 import type { CareReport } from "@/lib/care-reports";
+import { INSURANCE_PROVIDERS, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
 
 const CATEGORY_LABELS: Record<string, string> = {
   diet: "Diet",
   hygiene: "Hygiene",
   health: "Health",
   insurance: "Insurance",
-  behavior: "Behavior",
+  materials: "Materials",
 };
+
+function money(range: { low: number; high: number } | undefined) {
+  if (!range) return null;
+  return `$${range.low}–$${range.high}`;
+}
 
 function List({ items }: { items: string[] }) {
   return (
@@ -25,18 +31,16 @@ function CategoryBody({ report }: { report: CareReport }) {
     case "diet":
       return (
         <>
-          <ul className="space-y-2 text-sm">
-            {c.recommendations?.map((r: any, i: number) => (
-              <li key={i}>
-                <span className="font-medium">{r.item}</span>
-                {r.brand_examples?.length ? ` — ${r.brand_examples.join(", ")}` : ""}
-                <p className="text-muted-foreground">{r.notes}</p>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {c.frequency?.value}x per day
+          <p className="text-sm">
+            <span className="font-medium">{c.primary_food?.name}</span>
+            {c.primary_food?.brand_examples?.length
+              ? ` — ${c.primary_food.brand_examples.join(", ")}`
+              : ""}
           </p>
+          <p className="text-sm text-muted-foreground">
+            {money(c.primary_food?.price_range)}/mo
+          </p>
+          <p className="mt-2 text-sm">{c.feeding_instructions}</p>
           {c.cautions?.length > 0 && (
             <div className="mt-3">
               <p className="text-sm font-medium">Cautions</p>
@@ -47,32 +51,34 @@ function CategoryBody({ report }: { report: CareReport }) {
       );
     case "hygiene":
       return (
-        <>
-          <ul className="space-y-2 text-sm">
-            {c.routines?.map((r: any, i: number) => (
-              <li key={i}>
-                <span className="font-medium">{r.task}</span>{" "}
-                <span className="text-muted-foreground">
-                  every {r.frequency_days}d
-                </span>
-                <p className="text-muted-foreground">{r.notes}</p>
-              </li>
-            ))}
-          </ul>
+        <div className="space-y-2 text-sm">
+          <p>
+            <span className="font-medium">Bathing</span> — every {c.bathing?.frequency_days}d.{" "}
+            {c.bathing?.notes}
+          </p>
+          <p>
+            <span className="font-medium">Dental</span> — every {c.dental_care?.frequency_days}d.{" "}
+            {c.dental_care?.notes}
+            {c.dental_care?.dental_treats?.length
+              ? ` (${c.dental_care.dental_treats.join(", ")})`
+              : ""}
+          </p>
+          <p>
+            <span className="font-medium">Cleanup</span> — every {c.cleanup?.frequency_days}d.{" "}
+            {c.cleanup?.notes}
+          </p>
           {c.supplies?.length > 0 && (
             <div className="mt-3">
-              <p className="text-sm font-medium">Supplies</p>
+              <p className="font-medium">Supplies</p>
               <List items={c.supplies} />
             </div>
           )}
-        </>
+        </div>
       );
     case "health":
       return (
         <>
-          <p className="text-sm">
-            Vet checkups every {c.vet_checkup_frequency_days} days
-          </p>
+          <p className="text-sm">Vet checkups every {c.checkup_frequency_days} days</p>
           {c.vaccinations?.length > 0 && (
             <div className="mt-3">
               <p className="text-sm font-medium">Vaccinations</p>
@@ -89,19 +95,40 @@ function CategoryBody({ report }: { report: CareReport }) {
       );
     case "insurance":
       return (
-        <>
-          {c.coverage_types?.length > 0 && (
-            <div>
-              <p className="text-sm font-medium">Coverage types</p>
-              <List items={c.coverage_types} />
-            </div>
-          )}
-          <p className="mt-3 text-sm">
-            Estimated: ${c.estimated_monthly_cost_range?.low}–$
-            {c.estimated_monthly_cost_range?.high}/mo
-          </p>
-          {c.notes && <p className="mt-2 text-sm text-muted-foreground">{c.notes}</p>}
-        </>
+        <ul className="space-y-2 text-sm">
+          {c.providers?.map((p: any, i: number) => {
+            const provider = INSURANCE_PROVIDERS[p.provider_key as InsuranceProviderKey];
+            return (
+              <li key={i}>
+                {provider ? (
+                  <a
+                    href={provider.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium underline"
+                  >
+                    {provider.name}
+                  </a>
+                ) : (
+                  <span className="font-medium">{p.provider_key}</span>
+                )}{" "}
+                — {money(p.estimated_monthly_range)}/mo
+                <p className="text-muted-foreground">{p.notes}</p>
+              </li>
+            );
+          })}
+        </ul>
+      );
+    case "materials":
+      return (
+        <ul className="space-y-2 text-sm">
+          {c.items?.map((item: any, i: number) => (
+            <li key={i}>
+              <span className="font-medium">{item.name}</span> — {money(item.price_range)}
+              <p className="text-muted-foreground">{item.purpose}</p>
+            </li>
+          ))}
+        </ul>
       );
     default:
       return null;
@@ -109,11 +136,9 @@ function CategoryBody({ report }: { report: CareReport }) {
 }
 
 export function CareReportCard({ report }: { report: CareReport }) {
-  const content = report.content as Record<string, any>;
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="font-semibold">{CATEGORY_LABELS[report.category] ?? report.category}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{content.summary}</p>
       <div className="mt-3">
         <CategoryBody report={report} />
       </div>

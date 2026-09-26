@@ -8,6 +8,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   hygiene: "Hygiene",
   health: "Health",
   insurance: "Insurance",
+  materials: "Materials",
 };
 
 export function GenerateCarePlanForm({

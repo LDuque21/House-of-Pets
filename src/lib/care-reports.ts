@@ -40,19 +40,26 @@ type DerivedTask = { task_name: string; frequency_days: number };
 
 function deriveTasksForCategory(category: Category, content: Record<string, unknown>): DerivedTask[] {
   switch (category) {
-    case "diet": {
-      const freq = content.frequency as { value?: number } | undefined;
-      return [{ task_name: `Feed (${freq?.value ?? 1}x/day)`, frequency_days: 1 }];
-    }
+    case "diet":
+      return [{ task_name: "Feed", frequency_days: 1 }];
     case "hygiene": {
-      const routines = (content.routines as { task: string; frequency_days: number }[]) ?? [];
-      return routines.map((r) => ({ task_name: r.task, frequency_days: r.frequency_days }));
+      const bathing = content.bathing as { frequency_days?: number } | undefined;
+      const dental = content.dental_care as { frequency_days?: number } | undefined;
+      const cleanup = content.cleanup as { frequency_days?: number } | undefined;
+      const tasks: DerivedTask[] = [];
+      if (bathing?.frequency_days) tasks.push({ task_name: "Bath", frequency_days: bathing.frequency_days });
+      if (dental?.frequency_days)
+        tasks.push({ task_name: "Brush teeth", frequency_days: dental.frequency_days });
+      if (cleanup?.frequency_days)
+        tasks.push({ task_name: "Litter box / cleanup", frequency_days: cleanup.frequency_days });
+      return tasks;
     }
     case "health": {
-      const days = content.vet_checkup_frequency_days as number | undefined;
+      const days = content.checkup_frequency_days as number | undefined;
       return days ? [{ task_name: "Vet checkup", frequency_days: days }] : [];
     }
     case "insurance":
+    case "materials":
       return [];
   }
 }

@@ -6,13 +6,15 @@ import { saveCareReport, deriveAndSaveTasks } from "@/lib/care-reports";
 
 const CATEGORY_INSTRUCTIONS: Record<Category, string> = {
   diet:
-    "You are a veterinary nutrition specialist. Produce a personalized diet plan: food recommendations with brand examples, feeding frequency, and cautions.",
+    "You are a veterinary nutrition specialist. Recommend ONE primary food with 2-3 brand examples and a realistic monthly price range, plus one short feeding instruction sentence (e.g. 'Feed twice a day, morning and evening'). At most 2 cautions.",
   hygiene:
-    "You are a pet grooming and hygiene specialist. Produce a personalized hygiene routine: recurring tasks with frequency in days, and required supplies.",
+    "You are a pet grooming specialist. Cover: bathing frequency, dental care frequency + dental treats, and litter box or waste cleanup frequency. Each notes field is one short sentence.",
   health:
-    "You are a veterinary health specialist. Produce a personalized health plan: vet checkup cadence, expected vaccinations, and warning signs of illness.",
+    "You are a veterinary health specialist. Give vet checkup frequency, up to 3 key vaccinations, and up to 4 concrete warning signs of illness a first-time owner should watch for.",
   insurance:
-    "You are a pet insurance advisor. Produce personalized guidance: relevant coverage types, an estimated monthly cost range in USD, and notes.",
+    "You are a pet insurance advisor. Choose 3-5 providers from the given allowlist that plausibly cover this species, and estimate a realistic monthly cost range and one short note for each. Do not invent providers.",
+  materials:
+    "You are a pet supplies advisor. List 5-8 physical items a new owner needs day-to-day (food, litter box or waste bags, toys, dental care tools, cleanup supplies) with a one-line purpose and realistic price range each.",
 };
 
 function buildSystemPrompt(category: Category, pet: Pet): string {
@@ -22,7 +24,7 @@ function buildSystemPrompt(category: Category, pet: Pet): string {
     `Species: ${pet.species}${pet.breed ? ` (${pet.breed})` : ""}. Age stage: ${pet.age_stage}.`,
     `Species context: ${speciesContext}`,
     pet.notes ? `Owner-provided notes: ${pet.notes}` : "",
-    "Respond only with data matching the given JSON schema. Be specific and practical, not generic.",
+    "Write for a first-time pet owner: be concise and concrete, not exhaustive. Short plain sentences, no filler, no long paragraphs. Respond only with data matching the given JSON schema.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -35,6 +37,7 @@ export type CategoryResult =
 async function runCategoryAgent(category: Category, pet: Pet): Promise<CategoryResult> {
   try {
     const content = await generateStructuredJson<Record<string, unknown>>({
+      category,
       systemPrompt: buildSystemPrompt(category, pet),
       prompt: `Generate the ${category} plan for ${pet.name}.`,
       schema: CATEGORY_SCHEMAS[category],
@@ -54,6 +57,6 @@ async function runCategoryAgent(category: Category, pet: Pet): Promise<CategoryR
 
 // Orchestrator is plain async code, not an LLM call -- see spec section 3.
 export async function buildCareHub(pet: Pet): Promise<CategoryResult[]> {
-  const categories: Category[] = ["diet", "hygiene", "health", "insurance"];
+  const categories: Category[] = ["diet", "hygiene", "health", "insurance", "materials"];
   return Promise.all(categories.map((category) => runCategoryAgent(category, pet)));
 }
