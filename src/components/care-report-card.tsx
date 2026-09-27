@@ -3,9 +3,14 @@ import { ExternalLink, MapPin, Plus, SlidersHorizontal } from "lucide-react";
 import type { Category } from "@/lib/agents/schemas";
 import type { CareReport } from "@/lib/care-reports";
 import type { Pet, Species } from "@/lib/pets";
-import { INSURANCE_PROVIDERS, providersFor, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
+import {
+  INSURANCE_PROVIDERS,
+  providersFor,
+  VET_FINANCING,
+  type InsuranceProviderKey,
+} from "@/lib/agents/insurance-providers";
 import { RefineReportForm } from "@/components/refine-report-form";
-import { ESSENTIALS, matchEssentials } from "@/lib/agents/essentials";
+import { ESSENTIALS, matchEssentials, type Essential } from "@/lib/agents/essentials";
 import { CATEGORY_META } from "@/components/category-meta";
 import { amazonSearchUrl, frequencyLabel, nearbySearchUrl } from "@/lib/format";
 
@@ -182,7 +187,13 @@ function AmazonFootnote() {
 }
 
 type MaterialItem ={ name?: string; purpose?: string; price_range?: { low: number; high: number } };
-type Row = { name: string; purpose: string; price?: { low: number; high: number }; mustHave: boolean; shoppable: boolean };
+type Row = {
+  name: string;
+  purpose: string;
+  price?: { low: number; high: number };
+  tier: "must" | "recommended" | null; // null: an extra the agent added
+  shoppable: boolean;
+};
 
 const STORE_SEARCH: Record<Species, string> = {
   dog: "pet store",
@@ -199,26 +210,44 @@ const STORE_SEARCH: Record<Species, string> = {
   raccoon: "exotic pet supply store",
 };
 
-// The species' must-haves always appear (even if the agent left one out),
-// plus whatever extra items the agent thinks this pet needs.
-function MaterialsBody({ items, pet }: { items: MaterialItem[]; pet: Pet }) {
+const tierOf = (essential: Essential | undefined): Row["tier"] =>
+  !essential ? null : essential.recommended ? "recommended" : "must";
+
+// The species' must-have and recommended items always appear (even if the
+// agent left one out) unless the owner removed them through Adjust, plus
+// whatever extra items the agent thinks this pet needs.
+function MaterialsBody({ items, removed, pet }: { items: MaterialItem[]; removed: string[]; pet: Pet }) {
   const matches = matchEssentials(pet.species, items.map((item) => item.name ?? ""));
   const covered = new Set(matches.values());
-  const fromAgent: Row[] = items.map((item, i) => {
+  const isRemoved = (essential: Essential | undefined) => Boolean(essential && removed.includes(essential.name));
+  const fromAgent: Row[] = items.flatMap((item, i) => {
     const essential = matches.get(i);
+    if (isRemoved(essential)) return [];
     const price = item.price_range && item.price_range.high > 0 ? item.price_range : undefined;
-    return {
-      name: item.name ?? "",
-      purpose: item.purpose ?? "",
-      price,
-      mustHave: Boolean(essential),
-      shoppable: !essential?.activity && Boolean(price),
-    };
+    return [
+      {
+        name: item.name ?? "",
+        purpose: item.purpose ?? "",
+        price,
+        tier: tierOf(essential),
+        shoppable: !essential?.activity && Boolean(price),
+      },
+    ];
   });
   const missing: Row[] = ESSENTIALS[pet.species]
-    .filter((essential) => !covered.has(essential))
-    .map((essential) => ({ name: essential.name, purpose: essential.purpose, mustHave: true, shoppable: !essential.activity }));
-  const rows = [...fromAgent.filter((row) => row.mustHave), ...missing, ...fromAgent.filter((row) => !row.mustHave)];
+    .filter((essential) => !covered.has(essential) && !isRemoved(essential))
+    .map((essential) => ({
+      name: essential.name,
+      purpose: essential.purpose,
+      tier: tierOf(essential),
+      shoppable: !essential.activity,
+    }));
+  const all = [...fromAgent, ...missing];
+  const rows = [
+    ...all.filter((row) => row.tier === "must"),
+    ...all.filter((row) => row.tier === "recommended"),
+    ...all.filter((row) => row.tier === null),
+  ];
   const storesUrl = nearbySearchUrl(STORE_SEARCH[pet.species], pet);
 
   return (
@@ -251,9 +280,14 @@ function MaterialsBody({ items, pet }: { items: MaterialItem[]; pet: Pet }) {
               <div className="flex items-center justify-between gap-3">
                 <p className="flex flex-wrap items-center gap-x-2 font-semibold">
                   {row.name}
-                  {row.mustHave && (
+                  {row.tier === "must" && (
                     <span className="rounded-full bg-materials-soft px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-materials">
                       Must-have
+                    </span>
+                  )}
+                  {row.tier === "recommended" && (
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-secondary-foreground">
+                      Recommended
                     </span>
                   )}
                 </p>
@@ -279,6 +313,11 @@ function MaterialsBody({ items, pet }: { items: MaterialItem[]; pet: Pet }) {
           );
         })}
       </ul>
+      {removed.length > 0 && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Not needed for {pet.name}: {removed.join(", ")}. Use Adjust to bring any back.
+        </p>
+      )}
     </>
   );
 }
@@ -397,17 +436,39 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
         </>
       );
     case "insurance":
-      if (c.providers?.length === 0) {
-        return (
-          <p className="text-sm text-muted-foreground">
-            None of the insurers we track cover this kind of pet. An exotics vet can tell you about
-            wellness plans or savings options instead.
-          </p>
-        );
-      }
+      return <InsuranceBody c={c} pet={pet} />;
       return (
+        <MaterialsBody
+          items={c.items ?? []}
+          removed={Array.isArray(c.removed_essentials) ? c.removed_essentials : []}
+          pet={pet}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
+type ProviderPick = { provider_key?: string; estimated_monthly_range?: Range; notes?: string };
+type CostPlanning = { typical_costs?: { item?: string; price_range?: Range }[]; monthly_savings?: Range; tip?: string };
+
+// Insurers that cover the species (from the fixed list), then cost planning
+// for every pet. With one or no insurer, vet financing options are added so
+// exotic-pet owners still get a way to handle big bills.
+function InsuranceBody({ c, pet }: { c: Record<string, unknown>; pet: Pet }) {
+  const providers = (Array.isArray(c.providers) ? c.providers : []) as ProviderPick[];
+  const planning = c.cost_planning as CostPlanning | undefined;
+  const fewInsurers = providersFor(pet.species).length <= 1;
+  return (
+    <>
+      {providers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          None of the insurers we track cover this kind of pet, so here&apos;s how to plan
+          for vet costs instead.
+        </p>
+      ) : (
         <ul className="space-y-3">
-          {c.providers?.map((p: any, i: number) => {
+          {providers.map((p, i) => {
             const provider = INSURANCE_PROVIDERS[p.provider_key as InsuranceProviderKey];
             return (
               <li key={i}>
@@ -432,18 +493,53 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
             );
           })}
         </ul>
-      );
-    case "materials":
-      return <MaterialsBody items={c.items ?? []} pet={pet} />;
-    default:
-      return null;
-  }
+      )}
+      {planning && (
+        <Section title="Planning for vet costs">
+          <ul className="mt-1.5 space-y-1.5 text-sm">
+            {planning.typical_costs?.map((cost, i) => (
+              <li key={i} className="flex items-center justify-between gap-3">
+                <span>{cost.item}</span>
+                <Price range={cost.price_range} />
+              </li>
+            ))}
+            {planning.monthly_savings && (
+              <li className="flex items-center justify-between gap-3 font-semibold">
+                <span>Set aside</span>
+                <Price range={planning.monthly_savings} suffix="/mo" />
+              </li>
+            )}
+          </ul>
+          {planning.tip && <p className="mt-2 text-sm text-muted-foreground">{planning.tip}</p>}
+        </Section>
+      )}
+      {fewInsurers && (
+        <Section title="Paying for a big vet bill">
+          <ul className="mt-1.5 space-y-1.5 text-sm">
+            {VET_FINANCING.map((option) => (
+              <li key={option.name}>
+                <a
+                  href={option.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  {option.name}
+                  <ExternalLink className="size-3.5" />
+                </a>{" "}
+                <span className="text-muted-foreground">{option.note}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-xs text-muted-foreground">Ask your vet which ones they accept.</p>
+        </Section>
+      )}
+    </>
+  );
 }
 
 export function CareReportCard({ report, pet }: { report: CareReport; pet: Pet }) {
   const meta = CATEGORY_META[report.category];
-  // Nothing to adjust when no insurer covers the species.
-  const adjustable = !(report.category === "insurance" && providersFor(pet.species).length === 0);
   return (
     <article className="flex flex-col rounded-3xl border border-border bg-card p-5 shadow-sm">
       <header className="flex flex-wrap items-center gap-3">
@@ -451,7 +547,7 @@ export function CareReportCard({ report, pet }: { report: CareReport; pet: Pet }
           {meta && <meta.Icon className="size-5" />}
         </span>
         <h3 className="min-w-0 flex-1 text-lg font-semibold">{meta?.label ?? report.category}</h3>
-        {adjustable && <RefineReportForm petId={pet.id} category={report.category} label={meta.label} />}
+        <RefineReportForm petId={pet.id} category={report.category} label={meta.label} />
       </header>
       {report.request && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">

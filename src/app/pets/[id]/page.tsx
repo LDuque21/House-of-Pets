@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, CalendarCheck, ChevronLeft, HeartPulse, MapPin, Pencil, TriangleAlert } from "lucide-react";
+import { ArrowRight, CalendarCheck, ChevronLeft, HeartPulse, MapPin, Pencil } from "lucide-react";
 import { auth } from "@/lib/auth/server";
 import { getPetForUser } from "@/lib/pets";
 import { listCareReportsForPet, listTasksForPet, type Task } from "@/lib/care-reports";
@@ -100,15 +100,7 @@ export default async function PetPage({
                 ))}
               </ul>
             )}
-            {pet.notes && <p className="mt-3 max-w-2xl text-sm">{pet.notes}</p>}
-            {pet.species === "raccoon" && (
-              <p className="mt-3 flex max-w-2xl items-start gap-2 rounded-2xl bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-primary" />
-                Keeping a raccoon is illegal in many US states and needs a permit in others. Check your state and
-                local laws, and find an exotics vet who will see raccoons.
-              </p>
-            )}
-          </div>
+            {pet.notes && <p className="mt-3 max-w-2xl text-sm">{pet.notes}</p>}          </div>
           <Link
             href={`/pets/${pet.id}/edit`}
             className={buttonVariants({ variant: "outline", size: "pill", className: "self-start" })}

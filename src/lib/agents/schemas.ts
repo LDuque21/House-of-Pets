@@ -1,5 +1,6 @@
 import type { Species } from "@/lib/pets";
 import { providersFor } from "@/lib/agents/insurance-providers";
+import { ESSENTIALS } from "@/lib/agents/essentials";
 
 const PRICE_RANGE = {
   type: "object",
@@ -182,11 +183,42 @@ export const HEALTH_SCHEMA = {
   ],
 };
 
+// Money advice for every pet, insured or not: what vet care typically costs
+// for this species and how to budget for it. For species no insurer covers
+// (fish, raccoons) this is the whole card.
+const COST_PLANNING = {
+  type: "object",
+  properties: {
+    typical_costs: {
+      type: "array",
+      minItems: 1,
+      maxItems: 3,
+      description: "Common vet costs for this species in the US, e.g. 'Exotics vet exam', 'Emergency visit'.",
+      items: {
+        type: "object",
+        properties: { item: { type: "string" }, price_range: PRICE_RANGE },
+        required: ["item", "price_range"],
+      },
+    },
+    monthly_savings: { ...PRICE_RANGE, description: "A sensible amount to set aside each month for vet bills." },
+    tip: { type: "string", description: "One short, practical budgeting tip for this pet." },
+  },
+  required: ["typical_costs", "monthly_savings", "tip"],
+};
+
 // The provider enum is narrowed to insurers that cover the pet's species, so
 // the model can't recommend a company that won't insure it. Rabbits have only
-// one such provider, which is why the counts shrink to fit the list.
+// one such provider, which is why the counts shrink to fit the list. With no
+// provider at all, the schema drops the list and the agent only plans costs.
 export function insuranceSchema(species: Species) {
   const providers = providersFor(species);
+  if (providers.length === 0) {
+    return {
+      type: "object",
+      properties: { category: { type: "string", enum: ["insurance"] }, cost_planning: COST_PLANNING },
+      required: ["category", "cost_planning"],
+    };
+  }
   return {
     type: "object",
     properties: {
@@ -205,41 +237,51 @@ export function insuranceSchema(species: Species) {
           required: ["provider_key", "estimated_monthly_range", "notes"],
         },
       },
+      cost_planning: COST_PLANNING,
     },
-    required: ["category", "providers"],
+    required: ["category", "providers", "cost_planning"],
   };
 }
 
-export const MATERIALS_SCHEMA = {
-  type: "object",
-  properties: {
-    category: { type: "string", enum: ["materials"] },
-    items: {
-      type: "array",
-      minItems: 5,
-      maxItems: 12,
+// Built per species so removed_essentials can only name this species' real
+// must-have/recommended items (the card always shows those unless removed).
+export function materialsSchema(species: Species) {
+  return {
+    type: "object",
+    properties: {
+      category: { type: "string", enum: ["materials"] },
       items: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          purpose: { type: "string" },
-          price_range: PRICE_RANGE,
+        type: "array",
+        minItems: 3,
+        maxItems: 12,
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            purpose: { type: "string" },
+            price_range: PRICE_RANGE,
+          },
+          required: ["name", "purpose", "price_range"],
         },
-        required: ["name", "purpose", "price_range"],
       },
+      removed_essentials: {
+        type: "array",
+        description: "Listed items the owner said this pet doesn't need. Empty unless they asked.",
+        items: { type: "string", enum: ESSENTIALS[species].map((e) => e.name) },
+      },
+      extras: PRODUCT_EXTRAS,
     },
-    extras: PRODUCT_EXTRAS,
-  },
-  required: ["category", "items", "extras"],
-};
+    required: ["category", "items", "removed_essentials", "extras"],
+  };
+}
 
-// A category's schema is either fixed or built per species (insurance).
+// A category's schema is either fixed or built per species.
 export const CATEGORY_SCHEMAS = {
   diet: DIET_SCHEMA,
   hygiene: HYGIENE_SCHEMA,
   health: HEALTH_SCHEMA,
   insurance: insuranceSchema,
-  materials: MATERIALS_SCHEMA,
+  materials: materialsSchema,
 } as const;
 
 export type Category = keyof typeof CATEGORY_SCHEMAS;

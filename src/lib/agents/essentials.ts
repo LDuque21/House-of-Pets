@@ -5,7 +5,10 @@ import type { Species } from "@/lib/pets";
 // shows them, plus any extra items the agent adds. `match` holds lowercase
 // fragments used to recognize the agent's wording of the same item.
 // `activity` marks time-based needs (play, company) -- nothing to shop for.
-export type Essential = { name: string; purpose: string; match: string[]; activity?: true };
+// `recommended` items are shown and priced like must-haves but labeled as
+// good to have rather than essential. The owner can drop any of them through
+// the card's Adjust box (materials `removed_essentials`).
+export type Essential = { name: string; purpose: string; match: string[]; activity?: true; recommended?: true };
 
 export const ESSENTIALS: Record<Species, Essential[]> = {
   dog: [
@@ -21,7 +24,7 @@ export const ESSENTIALS: Record<Species, Essential[]> = {
     { name: "Litter box and litter", purpose: "One box per cat, plus one extra.", match: ["litter"] },
     { name: "Cat food", purpose: "Complete, taurine-rich food.", match: ["cat food", "kibble", "wet food", "dry food"] },
     { name: "Food and water bowls", purpose: "Fresh water every day (a fountain helps).", match: ["bowl", "fountain"] },
-    { name: "Scratching post", purpose: "Healthy claws and furniture-free scratching.", match: ["scratch"] },
+    { name: "Scratching post", purpose: "Healthy claws and furniture-free scratching.", match: ["scratch"], recommended: true },
     { name: "Toys", purpose: "Wands and balls for hunting play.", match: ["toy", "wand"] },
     { name: "Bed or hiding spot", purpose: "A cozy, safe place to retreat.", match: ["bed", "hide", "hiding"] },
     { name: "Carrier", purpose: "Safe trips to the vet.", match: ["carrier"] },
@@ -116,7 +119,7 @@ export const ESSENTIALS: Record<Species, Essential[]> = {
     { name: "Cool room", purpose: "Keep them below about 75°F; they overheat easily.", match: ["cool", "fan", "cooling", "temperature"], activity: true },
   ],
   raccoon: [
-    { name: "Large secure enclosure", purpose: "Escape-proof, with climbing space; raccoons open latches.", match: ["enclosure", "cage", "pen"] },
+    { name: "Secure space", purpose: "An enclosure or a raccoon-proofed room; raccoons open latches and cabinets.", match: ["enclosure", "cage", "pen", "raccoon-proof", "secure space"] },
     { name: "Varied omnivore diet", purpose: "Protein, fruit, vegetables and a quality base food.", match: ["food", "diet"] },
     { name: "Water tub", purpose: "For drinking and the food-washing they love.", match: ["water", "tub", "pool"] },
     { name: "Den box", purpose: "A dark, cozy place to sleep.", match: ["den", "nest", "hide"] },

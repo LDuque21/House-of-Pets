@@ -65,6 +65,7 @@ export function RefineReportForm({ petId, category, label }: { petId: string; ca
         <textarea
           id={`refine-${category}`}
           name="request"
+          autoComplete="off"
           required
           minLength={3}
           maxLength={300}

@@ -132,7 +132,7 @@ function TaskRow({ task, today }: { task: Task; today: string }) {
           <Icon className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{task.task_name}</p>
+          <p className="font-semibold leading-snug break-words">{task.task_name}</p>
           <p className="text-xs text-muted-foreground">
             {frequencyLabel(task.frequency_days)}
             {!isDaily(task) && (
@@ -309,7 +309,7 @@ export function RoutineCalendar({ tasks, today }: { tasks: Task[]; today: string
               aria-label={`${shortDate(date)}${entries.length ? `, ${entries.length} tasks` : ""}`}
               aria-pressed={selected === date}
               className={cn(
-                "flex min-h-12 flex-col items-center gap-1 rounded-xl border border-transparent p-1 text-sm transition hover:bg-muted sm:min-h-24 sm:items-stretch sm:p-1.5 sm:text-left",
+                "flex min-h-12 min-w-0 flex-col items-center gap-1 rounded-xl border border-transparent p-1 text-sm transition hover:bg-muted sm:min-h-24 sm:items-stretch sm:p-1.5 sm:text-left",
                 date < today && "text-muted-foreground",
                 selected === date && "border-primary/60 bg-secondary/60",
                 date === today && "bg-secondary"
@@ -330,7 +330,7 @@ export function RoutineCalendar({ tasks, today }: { tasks: Task[]; today: string
                   <span
                     key={j}
                     className={cn(
-                      "truncate rounded-md px-1.5 py-0.5 text-[0.7rem] font-semibold",
+                      "rounded-md px-1.5 py-0.5 text-[0.7rem] leading-tight font-semibold break-words hyphens-auto",
                       e.kind === "done" ? "bg-muted text-muted-foreground line-through" : CHIP[e.task.category],
                       e.kind === "overdue" && "ring-1 ring-destructive"
                     )}

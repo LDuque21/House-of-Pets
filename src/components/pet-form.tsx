@@ -128,6 +128,9 @@ export function PetForm({ pet }: { pet?: Pet }) {
   return (
     <form
       action={editing ? updatePetAction : createPetAction}
+      // Browsers remember typed values per field and suggest them to whoever
+      // uses the device next; pet details shouldn't follow one user to another.
+      autoComplete="off"
       className="space-y-7 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
     >
       {pet && <input type="hidden" name="pet_id" value={pet.id} />}
@@ -215,7 +218,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Name</Label>
-        <input id="name" name="name" required defaultValue={pet?.name} placeholder="e.g. Biscuit" className={inputClass} />
+        <input id="name" name="name" autoComplete="off" required defaultValue={pet?.name} placeholder="e.g. Biscuit" className={inputClass} />
       </div>
 
       <fieldset>
@@ -250,6 +253,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
         <input
           id="breed"
           name="breed"
+          autoComplete="off"
           value={breed}
           onChange={(e) => setBreed(e.target.value)}
           placeholder="e.g. Holland Lop, budgie, leopard gecko"
@@ -285,6 +289,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
           <input
             id="age_years"
             name="age_years"
+            autoComplete="off"
             type="number"
             inputMode="numeric"
             min={0}
@@ -307,6 +312,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
         <input
           id="conditions"
           name="conditions"
+          autoComplete="off"
           maxLength={300}
           defaultValue={pet?.conditions ?? ""}
           placeholder="e.g. diabetes, arthritis, chicken allergy"
@@ -327,6 +333,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
             <input
               id="location_label"
               name="location_label"
+              autoComplete="off"
               value={locationLabel}
               onChange={(e) => setLocationLabel(e.target.value)}
               placeholder="City or ZIP, e.g. Miami, FL"
@@ -363,6 +370,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
         <textarea
           id="notes"
           name="notes"
+          autoComplete="off"
           rows={3}
           defaultValue={pet?.notes ?? ""}
           placeholder="Temperament, indoor or outdoor, picky eater…"

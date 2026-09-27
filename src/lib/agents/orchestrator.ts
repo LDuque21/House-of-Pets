@@ -6,7 +6,7 @@ import { HAS_EXTRAS, schemaFor, type Category } from "@/lib/agents/schemas";
 import { SPECIES_CONFIG } from "@/lib/agents/species-config";
 import { INSURANCE_PROVIDERS, providersFor } from "@/lib/agents/insurance-providers";
 import { ESSENTIALS } from "@/lib/agents/essentials";
-import { saveCareReport, deriveAndSaveTasks } from "@/lib/care-reports";
+import { saveCareReport, deriveAndSaveTasks, listCareReportsForPet } from "@/lib/care-reports";
 
 const CATEGORY_INSTRUCTIONS: Record<Category, string> = {
   diet:
@@ -18,7 +18,8 @@ const CATEGORY_INSTRUCTIONS: Record<Category, string> = {
     "Screenings: like people get a colonoscopy from age 45, pets need age-based screenings (e.g. senior blood panels and urinalysis, blood pressure, thyroid checks, dental X-rays, eye exams, heart checks). List up to 3 recommended NOW at this pet's age, beyond the routine exam, each with how often and what it catches. If the pet is not yet a senior, list up to 2 upcoming milestones with the age they start; otherwise leave that empty. " +
     "Condition care: for each known health condition (up to 3), give day-to-day management, how often to see the vet about it, and red flags that need a vet urgently. Leave it empty if there are no known conditions. Never contradict a vet's existing treatment plan.",
   insurance:
-    "You are a pet insurance advisor. Recommend providers only from the allowed list below; all of them insure this species, and a short list means few insurers do. For each, estimate a realistic monthly cost range and write one short note. If the pet has known health conditions, the notes must mention how that provider handles pre-existing conditions (most exclude them). Do not invent providers.",
+    "You are a pet insurance and vet-cost advisor. Recommend providers only from the allowed list below; all of them insure this species, and a short list means few insurers do. For each, estimate a realistic monthly cost range and write one short note. If the pet has known health conditions, the notes must mention how that provider handles pre-existing conditions (most exclude them). Do not invent providers. " +
+    "Then plan costs for every pet, insured or not: up to 3 typical US vet costs for this species (e.g. an exotics vet exam, an emergency visit, a common procedure) with realistic price ranges, a sensible monthly amount to set aside for vet bills, and one short practical budgeting tip.",
   materials:
     "You are a pet supplies advisor. List what a new owner needs day-to-day (food, housing or enclosure, bedding or litter, toys or enrichment, cleaning supplies) with a one-line purpose and realistic price range each, including anything a known health condition calls for (e.g. a ramp for arthritis). For time-based needs like daily play, the price range is 0 to 0.",
 };
@@ -35,10 +36,29 @@ function petProfileLines(pet: Pet): string[] {
 
 function allowedProvidersLine(pet: Pet): string {
   const providers = providersFor(pet.species).map((key) => `${key} (${INSURANCE_PROVIDERS[key].name})`);
+  if (providers.length === 0) {
+    return "No insurer on our list covers this species, so there are no providers to pick: focus entirely on cost planning.";
+  }
   return `Allowed providers, as provider_key (company): ${providers.join(", ")}.`;
 }
 
-function buildSystemPrompt(category: Category, pet: Pet): string {
+// The species' must-have and recommended items, minus any the owner removed.
+function essentialsLines(pet: Pet, removed: string[]): string {
+  const kept = ESSENTIALS[pet.species].filter((e) => !removed.includes(e.name));
+  const names = (list: typeof kept) => list.map((e) => e.name).join("; ");
+  const must = kept.filter((e) => !e.recommended);
+  const recommended = kept.filter((e) => e.recommended);
+  return [
+    must.length ? `Must-have items -- always include every one, using these exact names, with a price range: ${names(must)}.` : "",
+    recommended.length ? `Recommended items -- include these too, using these exact names: ${names(recommended)}.` : "",
+    removed.length ? `The owner said this pet doesn't need: ${removed.join("; ")}. Leave them out and keep them in removed_essentials.` : "",
+    "Then add up to 4 more items this particular pet needs.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function buildSystemPrompt(category: Category, pet: Pet, removedEssentials: string[] = []): string {
   const speciesContext = SPECIES_CONFIG[pet.species].context;
   return [
     CATEGORY_INSTRUCTIONS[category],
@@ -46,9 +66,7 @@ function buildSystemPrompt(category: Category, pet: Pet): string {
     `Species context: ${speciesContext}`,
     pet.notes ? `Owner-provided notes: ${pet.notes}` : "",
     category === "insurance" ? allowedProvidersLine(pet) : "",
-    category === "materials"
-      ? `Must-have items -- always include every one, using these exact names, with a price range: ${ESSENTIALS[pet.species].map((e) => e.name).join("; ")}. Then add up to 4 more items this particular pet needs.`
-      : "",
+    category === "materials" ? essentialsLines(pet, removedEssentials) : "",
     "Write for a first-time pet owner: be concise and concrete, not exhaustive. Short plain sentences, no filler, no long paragraphs. Respond only with data matching the given JSON schema.",
   ]
     .filter(Boolean)
@@ -93,25 +111,38 @@ function applyRefinement(response: Record<string, unknown>, previous: Record<str
   return { ...previous, extras: [...kept, ...added].slice(-4) };
 }
 
+const REMOVE_ESSENTIALS_RULES =
+  "The listed must-have and recommended items are shown by default, but the owner decides: if they say the pet doesn't need or use one (e.g. 'we don't use an enclosure'), that's a 'change': drop it from items and put its exact name in removed_essentials. If they want one back, take it out of removed_essentials and include it again.";
+
+const stringList = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v) => typeof v === "string") : []);
+
+// Must-haves the owner removed stay removed when the whole plan is regenerated.
+async function previousRemovedEssentials(petId: string): Promise<string[]> {
+  const previous = (await listCareReportsForPet(petId)).find((r) => r.category === "materials");
+  return stringList(previous?.content.removed_essentials);
+}
+
 async function runCategoryAgent(category: Category, pet: Pet, refinement?: Refinement): Promise<CategoryResult> {
   try {
-    // No insurer on the allowlist covers this species (fish): skip Gemini and
-    // save an empty list, so the card says so instead of the model inventing one.
-    if (category === "insurance" && providersFor(pet.species).length === 0) {
-      const content = { category, providers: [] };
-      await saveCareReport(pet.id, category, content);
-      return { category, status: "ok", content };
-    }
+    const removedEssentials =
+      category !== "materials"
+        ? []
+        : refinement
+          ? stringList(refinement.previous.removed_essentials)
+          : await previousRemovedEssentials(pet.id);
 
     const schema = schemaFor(category, pet.species, Boolean(refinement));
     const systemPrompt = refinement
       ? [
-          buildSystemPrompt(category, pet),
+          buildSystemPrompt(category, pet, removedEssentials),
           REFINE_RULES,
           HAS_EXTRAS.has(category) ? ADD_OR_CHANGE_RULES : "Return the full updated version, keeping everything that still fits.",
+          category === "materials" ? REMOVE_ESSENTIALS_RULES : "",
           `Current version: ${JSON.stringify(refinement.previous)}`,
-        ].join("\n")
-      : buildSystemPrompt(category, pet);
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : buildSystemPrompt(category, pet, removedEssentials);
     const response = await generateStructuredJson<Record<string, unknown>>({
       agent: category,
       systemPrompt,
@@ -127,6 +158,11 @@ async function runCategoryAgent(category: Category, pet: Pet, refinement?: Refin
       throw new Error(`Response didn't match the schema (missing ${missing.join(", ")})`);
     }
     const content = refinement ? applyRefinement(response, refinement.previous) : response;
+    // Species no insurer covers get a cost-planning-only schema; an explicit
+    // empty list tells the card to say so.
+    if (category === "insurance" && !Array.isArray(content.providers)) content.providers = [];
+    // A fresh plan never brings back what the owner removed.
+    if (category === "materials" && !refinement) content.removed_essentials = removedEssentials;
     await saveCareReport(pet.id, category, content, refinement?.request ?? null);
     await deriveAndSaveTasks(pet.id, category, content);
     return { category, status: "ok", content };

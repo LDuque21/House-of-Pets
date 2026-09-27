@@ -49,6 +49,6 @@ export const SPECIES_CONFIG: Record<Species, { context: string }> = {
   },
   raccoon: {
     context:
-      "Raccoons are wild-type omnivores. Keeping one is illegal in many US states and needs a permit in others, so the owner must check state and local law. There is no licensed rabies vaccine for raccoons, and they can carry raccoon roundworm (Baylisascaris), which is dangerous to people, so strict hand and enclosure hygiene and regular deworming matter. They need a large, secure, enriched enclosure, a varied omnivore diet (not dog or cat food alone), an exotics vet willing to see them, and lots of daily enrichment; they're rarely bathed.",
+      "Raccoons are clever, curious omnivores. Many live free-roaming in the home rather than in an enclosure, so a raccoon-proofed space (secured cabinets, latches and trash) matters. There is no licensed rabies vaccine for raccoons, and they can carry raccoon roundworm (Baylisascaris), which is dangerous to people, so strict hand and litter hygiene and regular deworming matter. They need a varied omnivore diet (not dog or cat food alone), an exotics vet, and lots of daily enrichment and attention; they're rarely bathed.",
   },
 };

@@ -31,6 +31,13 @@ export const INSURANCE_PROVIDERS = {
 
 export type InsuranceProviderKey = keyof typeof INSURANCE_PROVIDERS;
 
+// Vet-bill financing most US clinics accept, shown when one or no insurer
+// covers the species. Hardcoded like the insurers: links are never generated.
+export const VET_FINANCING = [
+  { name: "CareCredit", url: "https://www.carecredit.com", note: "A health credit card many vets accept." },
+  { name: "Scratchpay", url: "https://scratchpay.com", note: "Payment plans for vet bills." },
+] as const;
+
 // The providers that insure this species -- the only ones the insurance agent may pick.
 export function providersFor(species: Species): InsuranceProviderKey[] {
   return (Object.keys(INSURANCE_PROVIDERS) as InsuranceProviderKey[]).filter((key) => {

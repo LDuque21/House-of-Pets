@@ -8,7 +8,7 @@ Built solo for ShellHacks 2026.
 
 ## Features
 
-- **Twelve species:** dog, cat, rabbit, fish, bird, horse, reptile, hamster, guinea pig, rat, chinchilla and raccoon (with a heads-up on raccoon ownership laws).
+- **Twelve species:** dog, cat, rabbit, fish, bird, horse, reptile, hamster, guinea pig, rat, chinchilla and raccoon.
 - **Add a pet by photo or by hand.** The vision agent pre-fills the form; you confirm or correct it.
 - **Five-category care plan**, kept short enough to scan in seconds: three food picks, bathing/dental/cleanup routines with the products to buy, checkups and warning signs, matching insurers, and a shopping list.
 - **Shop in one tap.** Diet and Hygiene recommend up to three real products per need (food, toothbrush, toothpaste, shampoo, litter…) with price ranges, each linked to Amazon.
