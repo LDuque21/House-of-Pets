@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fredoka, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -23,6 +23,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "House of Pets",
   description: "Personalized pet care plans, generated for your pet.",
+  // Home-screen install on iPhone (the manifest covers Android/desktop).
+  appleWebApp: { capable: true, title: "House of Pets", statusBarStyle: "default" },
+};
+
+// Browser/status bar color on phones, matched to the page background.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fef9f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d140f" },
+  ],
 };
 
 export default function RootLayout({

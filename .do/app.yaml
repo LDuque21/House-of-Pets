@@ -16,7 +16,8 @@ services:
     run_command: npm start
     http_port: 8080
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-1gb
+    # Smallest size ($5/mo). If it runs out of memory, step up to apps-s-1vcpu-1gb.
+    instance_size_slug: apps-s-1vcpu-0.5gb
     health_check:
       http_path: /
     envs:
