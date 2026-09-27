@@ -12,7 +12,7 @@
 
 ## What it does
 
-House of Pets is a care dashboard for twelve kinds of pets: dogs, cats, rabbits, fish, birds, horses, reptiles, hamsters, guinea pigs, rats, chinchillas and raccoons.
+House of Pets is a care dashboard for 24 kinds of pets, from dogs, cats and horses to ferrets, sugar gliders, hedgehogs, chickens, chameleons, snakes, axolotls and hermit crabs.
 
 1. **Add your pet by photo.** A Gemini vision agent identifies the species, breed and life stage, and you confirm it. You can also type the details in.
 2. **Generate a care plan.** Five specialist agents work at the same time, and each one fills its own card:
@@ -33,7 +33,7 @@ It's a dashboard, not a chatbot. You get scannable answers you can act on in sec
 - **Five parallel Gemini agents with enforced JSON schemas.** Each category is its own agent with its own system prompt and a strict `responseJsonSchema`, so every card renders from typed data. A plain-code orchestrator runs all five at once with `Promise.all`. We chose that over an LLM router because it's predictable, fast and cheap (about half a cent per full plan).
 - **Gemini vision agent** identifies the pet from a photo. The photo is resized in the browser first, and the agent returns species, breed, age and a confidence level. If the animal isn't a supported species, it says so instead of guessing.
 - **Grounded answers where hallucination would hurt.** The insurance agent can only pick from a vetted list of real insurers, filtered to the ones that cover the species. A fish gets an honest "no insurers cover this" rather than an invented policy. Must-have supplies per species come from our own list, so they never go missing.
-- **Species-aware prompts** for all twelve animals, so fish get water-quality care instead of baths and horses get farrier visits.
+- **Species-aware prompts** for all 24 animals, so fish get water-quality care instead of baths and horses get farrier visits.
 - **Resilience:** agents save independently. If one fails, the other four still land, and the card explains what went wrong. Responses missing required fields are rejected, so a bad answer never replaces a good plan.
 - **Stack:** Next.js 16 (App Router, TypeScript), Tailwind v4 and shadcn/ui; PostgreSQL on Neon with JSONB for reports; Neon Auth; hosted on DigitalOcean App Platform with auto-deploy from GitHub; custom domain from GoDaddy. It's installable as a phone app (PWA).
 
@@ -42,7 +42,7 @@ It's a dashboard, not a chatbot. You get scannable answers you can act on in sec
 - **API key rejections.** One Gemini API key started returning 401 errors because of a known issue on Google's side with a newer key format, so we had to tell key problems apart from code problems.
 - **Free-tier quotas.** The free tier's per-project daily limit ran out quickly with five agents per plan. We added per-agent keys and retry with backoff on 429/503 before moving to a paid plan.
 - **Malformed model output.** Early on, an incomplete response could overwrite a good report with a blank card. Validating the required fields before saving fixed it.
-- **Scope across twelve species.** Supporting horses, fish and reptiles alongside cats and dogs meant rethinking every category, since not every animal gets baths, vaccines or insurance.
+- **Scope across 24 species.** Supporting horses, fish and reptiles alongside cats and dogs meant rethinking every category, since not every animal gets baths, vaccines or insurance.
 
 ## Accomplishments that we're proud of
 

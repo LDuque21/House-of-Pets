@@ -2,33 +2,74 @@ import type { Pet, Species } from "@/lib/pets";
 
 // Friendly labels for pets, task frequencies and nearby-store links.
 
+// How species are grouped wherever they're listed (species picker, landing
+// page): by kind of animal, with the water animals together at the end.
+// Keep in sync with SPECIES in lib/pets.ts (same order).
+export const SPECIES_GROUPS: { label: string; species: Species[] }[] = [
+  {
+    label: "Mammals",
+    species: [
+      "dog", "cat", "horse", "pig", "rabbit", "ferret", "raccoon", "squirrel",
+      "sugar_glider", "hedgehog", "guinea_pig", "chinchilla", "hamster", "rat", "mouse",
+    ],
+  },
+  { label: "Birds", species: ["bird", "chicken"] },
+  { label: "Reptiles", species: ["lizard", "chameleon", "snake"] },
+  { label: "Amphibians", species: ["frog", "axolotl"] },
+  { label: "Aquatic", species: ["fish", "crab"] },
+];
+
 export const SPECIES_LABELS: Record<Species, string> = {
   dog: "Dog",
   cat: "Cat",
-  rabbit: "Rabbit",
-  fish: "Fish",
-  bird: "Bird",
   horse: "Horse",
-  reptile: "Reptile",
-  hamster: "Hamster",
-  guinea_pig: "Guinea pig",
-  rat: "Rat",
-  chinchilla: "Chinchilla",
+  pig: "Pig",
+  rabbit: "Rabbit",
+  ferret: "Ferret",
   raccoon: "Raccoon",
+  squirrel: "Squirrel",
+  sugar_glider: "Sugar glider",
+  hedgehog: "Hedgehog",
+  guinea_pig: "Guinea pig",
+  chinchilla: "Chinchilla",
+  hamster: "Hamster",
+  rat: "Rat",
+  mouse: "Mouse",
+  bird: "Bird",
+  chicken: "Chicken",
+  lizard: "Lizard",
+  chameleon: "Chameleon",
+  snake: "Snake",
+  frog: "Frog",
+  axolotl: "Axolotl",
+  fish: "Fish",
+  crab: "Crab",
 };
 const BABY_LABELS: Record<Species, string> = {
   dog: "Puppy",
   cat: "Kitten",
-  rabbit: "Kit",
-  fish: "Fry",
-  bird: "Chick",
   horse: "Foal",
-  reptile: "Hatchling",
-  hamster: "Pup",
-  guinea_pig: "Pup",
-  rat: "Pup",
-  chinchilla: "Kit",
+  pig: "Piglet",
+  rabbit: "Kit",
+  ferret: "Kit",
   raccoon: "Kit",
+  squirrel: "Kit",
+  sugar_glider: "Joey",
+  hedgehog: "Hoglet",
+  guinea_pig: "Pup",
+  chinchilla: "Kit",
+  hamster: "Pup",
+  rat: "Pup",
+  mouse: "Pup",
+  bird: "Chick",
+  chicken: "Chick",
+  lizard: "Hatchling",
+  chameleon: "Hatchling",
+  snake: "Hatchling",
+  frog: "Froglet",
+  axolotl: "Juvenile",
+  fish: "Fry",
+  crab: "Juvenile",
 };
 
 function yearsLabel(years: number | null): string | null {

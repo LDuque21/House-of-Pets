@@ -19,8 +19,11 @@ CREATE TABLE IF NOT EXISTS pets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL, -- Neon Managed Auth user id (neon_auth.user.id)
   name TEXT NOT NULL,
-  species TEXT NOT NULL CHECK (species IN ('dog', 'cat', 'rabbit', 'fish', 'bird', 'horse', 'reptile', 'hamster',
-                                           'guinea_pig', 'rat', 'chinchilla', 'raccoon')),
+  species TEXT NOT NULL CHECK (species IN (
+    'dog', 'cat', 'horse', 'pig', 'rabbit', 'ferret', 'raccoon', 'squirrel', 'sugar_glider', 'hedgehog',
+    'guinea_pig', 'chinchilla', 'hamster', 'rat', 'mouse', 'bird', 'chicken', 'lizard', 'chameleon', 'snake',
+    'frog', 'axolotl', 'fish', 'crab'
+  )),
   breed TEXT,
   age_stage TEXT NOT NULL CHECK (age_stage IN ('baby', 'adult', 'senior')),
   confidence TEXT CHECK (confidence IN ('high', 'medium', 'low')),

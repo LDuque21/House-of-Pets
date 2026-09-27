@@ -15,7 +15,7 @@ const VISION_SCHEMA = {
       type: "string",
       enum: [...SPECIES, "unsupported"],
       description:
-        "The matching supported species. reptile = lizards, snakes, turtles, tortoises; bird = pet birds; hamster = hamsters only; guinea_pig = guinea pigs; rat = rats; chinchilla = chinchillas; raccoon = raccoons. Use 'unsupported' for any other animal (e.g. ferret, mouse, gerbil) or if there is no animal.",
+        "The matching supported species. lizard = geckos, bearded dragons, skinks, iguanas and other lizards except chameleons; chameleon = chameleons; snake = snakes; frog = frogs and toads; axolotl = axolotls; crab = hermit crabs and other pet crabs; bird = pet birds except chickens; chicken = chickens; pig = pigs; sugar_glider = sugar gliders; hamster, guinea_pig, rat, mouse, chinchilla, ferret, hedgehog, squirrel, raccoon = those animals. Use 'unsupported' for any other animal (e.g. turtle, tortoise, gerbil, goat) or if there is no animal.",
     },
     breed: { type: "string", description: "Breed or variety if recognizable, otherwise an empty string." },
     age_stage: { type: "string", enum: [...AGE_STAGES] },

@@ -64,8 +64,8 @@
   --color-bird-soft: var(--bird-soft);
   --color-horse: var(--horse);
   --color-horse-soft: var(--horse-soft);
-  --color-reptile: var(--reptile);
-  --color-reptile-soft: var(--reptile-soft);
+  --color-lizard: var(--lizard);
+  --color-lizard-soft: var(--lizard-soft);
   --color-hamster: var(--hamster);
   --color-hamster-soft: var(--hamster-soft);
   --color-guinea-pig: var(--guinea-pig);
@@ -76,6 +76,30 @@
   --color-chinchilla-soft: var(--chinchilla-soft);
   --color-raccoon: var(--raccoon);
   --color-raccoon-soft: var(--raccoon-soft);
+  --color-pig: var(--pig);
+  --color-pig-soft: var(--pig-soft);
+  --color-ferret: var(--ferret);
+  --color-ferret-soft: var(--ferret-soft);
+  --color-squirrel: var(--squirrel);
+  --color-squirrel-soft: var(--squirrel-soft);
+  --color-sugar-glider: var(--sugar-glider);
+  --color-sugar-glider-soft: var(--sugar-glider-soft);
+  --color-hedgehog: var(--hedgehog);
+  --color-hedgehog-soft: var(--hedgehog-soft);
+  --color-mouse: var(--mouse);
+  --color-mouse-soft: var(--mouse-soft);
+  --color-chicken: var(--chicken);
+  --color-chicken-soft: var(--chicken-soft);
+  --color-chameleon: var(--chameleon);
+  --color-chameleon-soft: var(--chameleon-soft);
+  --color-snake: var(--snake);
+  --color-snake-soft: var(--snake-soft);
+  --color-frog: var(--frog);
+  --color-frog-soft: var(--frog-soft);
+  --color-axolotl: var(--axolotl);
+  --color-axolotl-soft: var(--axolotl-soft);
+  --color-crab: var(--crab);
+  --color-crab-soft: var(--crab-soft);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -143,8 +167,8 @@
   --bird-soft: oklch(0.94 0.07 100);
   --horse: oklch(0.45 0.1 30);
   --horse-soft: oklch(0.92 0.045 35);
-  --reptile: oklch(0.46 0.1 150);
-  --reptile-soft: oklch(0.93 0.05 150);
+  --lizard: oklch(0.46 0.1 150);
+  --lizard-soft: oklch(0.93 0.05 150);
   --hamster: oklch(0.5 0.09 65);
   --hamster-soft: oklch(0.93 0.05 70);
   --guinea-pig: oklch(0.48 0.1 45);
@@ -155,6 +179,30 @@
   --chinchilla-soft: oklch(0.93 0.035 200);
   --raccoon: oklch(0.42 0.03 60);
   --raccoon-soft: oklch(0.92 0.02 60);
+  --pig: oklch(0.5 0.1 5);
+  --pig-soft: oklch(0.93 0.04 5);
+  --ferret: oklch(0.46 0.06 50);
+  --ferret-soft: oklch(0.92 0.03 50);
+  --squirrel: oklch(0.48 0.1 40);
+  --squirrel-soft: oklch(0.92 0.05 40);
+  --sugar-glider: oklch(0.46 0.05 265);
+  --sugar-glider-soft: oklch(0.93 0.025 265);
+  --hedgehog: oklch(0.47 0.06 80);
+  --hedgehog-soft: oklch(0.93 0.035 80);
+  --mouse: oklch(0.47 0.06 310);
+  --mouse-soft: oklch(0.93 0.03 310);
+  --chicken: oklch(0.5 0.1 85);
+  --chicken-soft: oklch(0.94 0.06 85);
+  --chameleon: oklch(0.47 0.12 135);
+  --chameleon-soft: oklch(0.93 0.06 135);
+  --snake: oklch(0.47 0.08 175);
+  --snake-soft: oklch(0.93 0.04 175);
+  --frog: oklch(0.48 0.11 120);
+  --frog-soft: oklch(0.93 0.06 120);
+  --axolotl: oklch(0.5 0.11 330);
+  --axolotl-soft: oklch(0.93 0.04 330);
+  --crab: oklch(0.5 0.13 25);
+  --crab-soft: oklch(0.93 0.04 25);
 }
 
 /* Warm cocoa + apricot. */
@@ -214,8 +262,8 @@
   --bird-soft: oklch(0.33 0.05 100);
   --horse: oklch(0.85 0.07 35);
   --horse-soft: oklch(0.32 0.05 35);
-  --reptile: oklch(0.86 0.08 150);
-  --reptile-soft: oklch(0.32 0.05 150);
+  --lizard: oklch(0.86 0.08 150);
+  --lizard-soft: oklch(0.32 0.05 150);
   --hamster: oklch(0.87 0.07 70);
   --hamster-soft: oklch(0.33 0.05 70);
   --guinea-pig: oklch(0.86 0.07 45);
@@ -226,6 +274,30 @@
   --chinchilla-soft: oklch(0.32 0.04 200);
   --raccoon: oklch(0.85 0.025 60);
   --raccoon-soft: oklch(0.32 0.02 60);
+  --pig: oklch(0.87 0.07 5);
+  --pig-soft: oklch(0.33 0.05 5);
+  --ferret: oklch(0.86 0.05 50);
+  --ferret-soft: oklch(0.32 0.03 50);
+  --squirrel: oklch(0.86 0.07 40);
+  --squirrel-soft: oklch(0.33 0.05 40);
+  --sugar-glider: oklch(0.86 0.04 265);
+  --sugar-glider-soft: oklch(0.32 0.03 265);
+  --hedgehog: oklch(0.86 0.05 80);
+  --hedgehog-soft: oklch(0.32 0.03 80);
+  --mouse: oklch(0.86 0.05 310);
+  --mouse-soft: oklch(0.32 0.03 310);
+  --chicken: oklch(0.88 0.08 85);
+  --chicken-soft: oklch(0.33 0.05 85);
+  --chameleon: oklch(0.86 0.1 135);
+  --chameleon-soft: oklch(0.32 0.06 135);
+  --snake: oklch(0.86 0.07 175);
+  --snake-soft: oklch(0.32 0.04 175);
+  --frog: oklch(0.87 0.09 120);
+  --frog-soft: oklch(0.33 0.05 120);
+  --axolotl: oklch(0.87 0.07 330);
+  --axolotl-soft: oklch(0.33 0.05 330);
+  --crab: oklch(0.86 0.08 25);
+  --crab-soft: oklch(0.33 0.06 25);
 }
 
 @layer base {

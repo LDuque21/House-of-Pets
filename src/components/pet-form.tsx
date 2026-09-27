@@ -7,14 +7,10 @@ import { AnimalSilhouette, SPECIES_TINTS } from "@/components/animal-silhouettes
 import { SubmitButton } from "@/components/submit-button";
 import { buttonVariants } from "@/components/ui/button";
 import type { Identification } from "@/lib/agents/vision";
-import { SPECIES_LABELS } from "@/lib/format";
+import { SPECIES_GROUPS, SPECIES_LABELS } from "@/lib/format";
 import type { AgeStage, Confidence, Pet, Species } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
-// Kept local (not imported from lib/pets, which pulls in the database pool).
-const SPECIES_ORDER: Species[] = [
-  "dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster", "guinea_pig", "rat", "chinchilla", "raccoon",
-];
 const AGE_OPTIONS: { value: AgeStage; label: string; hint: string }[] = [
   { value: "baby", label: "Baby", hint: "Still little" },
   { value: "adult", label: "Adult", hint: "All grown up" },
@@ -223,27 +219,32 @@ export function PetForm({ pet }: { pet?: Pet }) {
 
       <fieldset>
         <legend className="text-sm font-semibold">Species</legend>
-        <div className="mt-2 grid grid-cols-4 gap-2 sm:gap-3">
-          {SPECIES_ORDER.map((option) => (
-            <label key={option} className="relative">
-              <input
-                type="radio"
-                name="species"
-                value={option}
-                required
-                checked={species === option}
-                onChange={() => setSpecies(option)}
-                className={tileInputClass}
-              />
-              <span className={cn(tileClass, "flex flex-col items-center gap-1.5 px-1 py-3")}>
-                <AnimalSilhouette species={option} className={cn("w-11 sm:w-12", SPECIES_TINTS[option].text)} />
-                <span className="text-center font-heading text-sm font-semibold leading-tight">
-                  {SPECIES_LABELS[option]}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
+        {SPECIES_GROUPS.map((group) => (
+          <div key={group.label} className="mt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{group.label}</p>
+            <div className="mt-1.5 grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3">
+              {group.species.map((option) => (
+                <label key={option} className="relative">
+                  <input
+                    type="radio"
+                    name="species"
+                    value={option}
+                    required
+                    checked={species === option}
+                    onChange={() => setSpecies(option)}
+                    className={tileInputClass}
+                  />
+                  <span className={cn(tileClass, "flex h-full flex-col items-center gap-1.5 px-1 py-3")}>
+                    <AnimalSilhouette species={option} className={cn("w-11 sm:w-12", SPECIES_TINTS[option].text)} />
+                    <span className="text-center font-heading text-sm font-semibold leading-tight">
+                      {SPECIES_LABELS[option]}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
       </fieldset>
 
       <div className="flex flex-col gap-2">

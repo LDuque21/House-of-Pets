@@ -1,8 +1,14 @@
 import { pool } from "@/lib/db";
 
 // Must match the pets.species CHECK constraint in schema.sql.
+// Grouped by kind of animal (see SPECIES_GROUPS in lib/format.ts).
 export const SPECIES = [
-  "dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster", "guinea_pig", "rat", "chinchilla", "raccoon",
+  "dog", "cat", "horse", "pig", "rabbit", "ferret", "raccoon", "squirrel",
+  "sugar_glider", "hedgehog", "guinea_pig", "chinchilla", "hamster", "rat", "mouse",
+  "bird", "chicken",
+  "lizard", "chameleon", "snake",
+  "frog", "axolotl",
+  "fish", "crab",
 ] as const;
 export type Species = (typeof SPECIES)[number];
 export const AGE_STAGES = ["baby", "adult", "senior"] as const;

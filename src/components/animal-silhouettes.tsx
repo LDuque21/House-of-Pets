@@ -1,10 +1,9 @@
 import type { Species } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
-// Species with a mask in public/silhouettes/. Add one here when its art lands.
-const HAS_ARTWORK = new Set<Species>([
-  "dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster", "guinea_pig", "rat", "chinchilla", "raccoon",
-]);
+// Species still waiting on a mask in public/silhouettes/ (none right now).
+// A species listed here renders a paw print until its art lands.
+const MISSING_ARTWORK = new Set<Species>([]);
 
 // The user's silhouette artwork, cut into one tight-cropped mask per species
 // (public/silhouettes/<species>.png). Rendered as a CSS mask over
@@ -20,7 +19,7 @@ export function AnimalSilhouette({
   align?: "bottom" | "center";
 }) {
   // Species still waiting on artwork get a paw print in the same box.
-  if (!HAS_ARTWORK.has(species)) {
+  if (MISSING_ARTWORK.has(species)) {
     return (
       <span aria-hidden className={cn("inline-grid aspect-square shrink-0 place-items-center", className)}>
         <PawPrint className="w-[78%]" />
@@ -63,16 +62,28 @@ export function PawPrint({ className }: { className?: string }) {
 export const SPECIES_TINTS: Record<Species, { text: string; avatar: string }> = {
   dog: { text: "text-dog", avatar: "bg-dog-soft text-dog" },
   cat: { text: "text-cat", avatar: "bg-cat-soft text-cat" },
-  rabbit: { text: "text-rabbit", avatar: "bg-rabbit-soft text-rabbit" },
-  fish: { text: "text-fish", avatar: "bg-fish-soft text-fish" },
-  bird: { text: "text-bird", avatar: "bg-bird-soft text-bird" },
   horse: { text: "text-horse", avatar: "bg-horse-soft text-horse" },
-  reptile: { text: "text-reptile", avatar: "bg-reptile-soft text-reptile" },
-  hamster: { text: "text-hamster", avatar: "bg-hamster-soft text-hamster" },
-  guinea_pig: { text: "text-guinea-pig", avatar: "bg-guinea-pig-soft text-guinea-pig" },
-  rat: { text: "text-rat", avatar: "bg-rat-soft text-rat" },
-  chinchilla: { text: "text-chinchilla", avatar: "bg-chinchilla-soft text-chinchilla" },
+  pig: { text: "text-pig", avatar: "bg-pig-soft text-pig" },
+  rabbit: { text: "text-rabbit", avatar: "bg-rabbit-soft text-rabbit" },
+  ferret: { text: "text-ferret", avatar: "bg-ferret-soft text-ferret" },
   raccoon: { text: "text-raccoon", avatar: "bg-raccoon-soft text-raccoon" },
+  squirrel: { text: "text-squirrel", avatar: "bg-squirrel-soft text-squirrel" },
+  sugar_glider: { text: "text-sugar-glider", avatar: "bg-sugar-glider-soft text-sugar-glider" },
+  hedgehog: { text: "text-hedgehog", avatar: "bg-hedgehog-soft text-hedgehog" },
+  guinea_pig: { text: "text-guinea-pig", avatar: "bg-guinea-pig-soft text-guinea-pig" },
+  chinchilla: { text: "text-chinchilla", avatar: "bg-chinchilla-soft text-chinchilla" },
+  hamster: { text: "text-hamster", avatar: "bg-hamster-soft text-hamster" },
+  rat: { text: "text-rat", avatar: "bg-rat-soft text-rat" },
+  mouse: { text: "text-mouse", avatar: "bg-mouse-soft text-mouse" },
+  bird: { text: "text-bird", avatar: "bg-bird-soft text-bird" },
+  chicken: { text: "text-chicken", avatar: "bg-chicken-soft text-chicken" },
+  lizard: { text: "text-lizard", avatar: "bg-lizard-soft text-lizard" },
+  chameleon: { text: "text-chameleon", avatar: "bg-chameleon-soft text-chameleon" },
+  snake: { text: "text-snake", avatar: "bg-snake-soft text-snake" },
+  frog: { text: "text-frog", avatar: "bg-frog-soft text-frog" },
+  axolotl: { text: "text-axolotl", avatar: "bg-axolotl-soft text-axolotl" },
+  fish: { text: "text-fish", avatar: "bg-fish-soft text-fish" },
+  crab: { text: "text-crab", avatar: "bg-crab-soft text-crab" },
 };
 
 // Round avatar: the pet's own photo if they uploaded one, otherwise the
