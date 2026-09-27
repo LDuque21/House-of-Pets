@@ -65,7 +65,8 @@ function parsePetForm(formData: FormData): PetInput {
     species: species as Species,
     breed: optionalText(formData, "breed"),
     age_stage: ageStage as AgeStage,
-    notes: optionalText(formData, "notes"),
+    // Notes go into all five agents' prompts, so keep them bounded.
+    notes: optionalText(formData, "notes")?.slice(0, 1000) ?? null,
     photo_url: photo || null,
     confidence: CONFIDENCES.includes(confidence as Confidence) ? (confidence as Confidence) : null,
     location_label: optionalText(formData, "location_label"),

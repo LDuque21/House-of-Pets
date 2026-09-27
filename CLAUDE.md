@@ -112,17 +112,16 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 
 ## Current status and next steps
 
-**Done and live:** everything above — auth, 24 species, photo identification, pet photos/edit/remove, profile photo, location + find-nearby, must-haves, redesigned light/dark UI with the user's silhouettes, PWA, DigitalOcean deploy, custom domain.
+**Done and live (as of ~4am Sep 27):** everything above — auth, 24 species, photo identification, pet photos/edit/remove, profile photo, location + find-nearby, Amazon product picks, age/condition-aware health, Adjust (add vs change), routine screen + calendar, cost planning for uninsured species, redesigned light/dark UI with the user's silhouettes, PWA, DigitalOcean deploy. README refreshed. Devpost draft in `docs/devpost.md` (still has [bracketed] spots for the user's own words). End-to-end agent tests passed on throwaway pets (full plans, add/change, must-have removal, several new species).
 
-**Not yet verified live:** a full care-plan generation and a photo identification in production with the new key (the user was about to test). Worth testing a fish (no insurers) and a horse (ASPCA only).
+**URGENT at ~4am:** `https://project-gibby.com` (the apex, which the QR code and docs use) fails TLS with "unrecognized name" from outside, while `https://www.project-gibby.com` and the `.ondigitalocean.app` URL work. DNS for the apex still points at DigitalOcean, so the app's domain list likely lost the apex when `www` was added (or it's stuck pending). Fix in DigitalOcean → Apps → house-of-pets → Settings → Domains: both `project-gibby.com` and `www.project-gibby.com` must be listed and Active. Fallback: regenerate the QR code for `https://www.project-gibby.com`.
 
-**Remaining before the deadline (priority order):**
-1. Live test on the phone (install the PWA, add a pet by photo, generate a plan); fix anything that breaks.
-2. Add `www.project-gibby.com` in DigitalOcean.
-3. Devpost writeup — story: 5 specialist Gemini agents in parallel with enforced JSON schemas + a Gemini vision agent + grounded insurer list; dashboard not chatbot (Microsoft); DigitalOcean + GoDaddy prize tracks. A QR code for https://project-gibby.com was generated for the slides.
-4. README refresh — it still says "early scaffold", four categories, dog/cat/rabbit.
-5. Demo video; submit by ~10am for buffer.
-6. Only if time remains: .ics calendar export, ML first-guess. (Checkable tasks and the per-card refine box: done Sep 27.)
+**Remaining before the 11am deadline (priority order):**
+1. Fix the apex domain (above); verify both domains load.
+2. Live test on the phone (install the PWA, add a pet by photo, generate a plan).
+3. Fill the [bracketed] parts of `docs/devpost.md` and paste into Devpost.
+4. Demo video; submit by ~10am for buffer.
+5. Not urgent: per-user rate limit on Generate/Adjust (any signed-up user can spend Gemini calls; ~half a cent per plan) — a Google Cloud budget alert covers the risk for now. Invalid pet ids in URLs give a 500 instead of a 404. The in-app embedded map (Maps Embed API, ~45 min) was discussed and deferred by the user.
 
 ## Working agreement
 
