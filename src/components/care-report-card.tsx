@@ -437,6 +437,7 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
       );
     case "insurance":
       return <InsuranceBody c={c} pet={pet} />;
+    case "materials":
       return (
         <MaterialsBody
           items={c.items ?? []}
