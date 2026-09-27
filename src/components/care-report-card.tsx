@@ -1,22 +1,39 @@
+import Link from "next/link";
+import { ExternalLink, MapPin } from "lucide-react";
 import type { CareReport } from "@/lib/care-reports";
+import type { Pet, Species } from "@/lib/pets";
 import { INSURANCE_PROVIDERS, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  diet: "Diet",
-  hygiene: "Hygiene",
-  health: "Health",
-  insurance: "Insurance",
-  materials: "Materials",
-};
+import { ESSENTIALS, matchEssentials } from "@/lib/agents/essentials";
+import { CATEGORY_META } from "@/components/category-meta";
+import { frequencyLabel, nearbySearchUrl } from "@/lib/format";
 
 function money(range: { low: number; high: number } | undefined) {
   if (!range) return null;
   return `$${range.low}–$${range.high}`;
 }
 
+function Price({ range, suffix = "" }: { range: { low: number; high: number } | undefined; suffix?: string }) {
+  const text = money(range);
+  if (!text) return null;
+  return (
+    <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
+      {text}
+      {suffix}
+    </span>
+  );
+}
+
+function Tag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
 function List({ items }: { items: string[] }) {
   return (
-    <ul className="list-disc space-y-1 pl-5 text-sm">
+    <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm marker:text-primary/60">
       {items.map((item, i) => (
         <li key={i}>{item}</li>
       ))}
@@ -24,124 +41,247 @@ function List({ items }: { items: string[] }) {
   );
 }
 
-function CategoryBody({ report }: { report: CareReport }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function Routine({ name, days, notes }: { name: string; days: number | undefined; notes: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold">{name}</p>
+        <Tag>{frequencyLabel(days)}</Tag>
+      </div>
+      <p className="mt-0.5 text-sm text-muted-foreground">{notes}</p>
+    </div>
+  );
+}
+
+type MaterialItem = { name?: string; purpose?: string; price_range?: { low: number; high: number } };
+type Row = { name: string; purpose: string; price?: { low: number; high: number }; mustHave: boolean; shoppable: boolean };
+
+const STORE_SEARCH: Record<Species, string> = {
+  dog: "pet store",
+  cat: "pet store",
+  rabbit: "pet store",
+  hamster: "pet store",
+  fish: "aquarium store",
+  bird: "bird supply store",
+  reptile: "reptile supply store",
+  horse: "tack and feed store",
+};
+
+// The species' must-haves always appear (even if the agent left one out),
+// plus whatever extra items the agent thinks this pet needs.
+function MaterialsBody({ items, pet }: { items: MaterialItem[]; pet: Pet }) {
+  const matches = matchEssentials(pet.species, items.map((item) => item.name ?? ""));
+  const covered = new Set(matches.values());
+  const fromAgent: Row[] = items.map((item, i) => {
+    const essential = matches.get(i);
+    const price = item.price_range && item.price_range.high > 0 ? item.price_range : undefined;
+    return {
+      name: item.name ?? "",
+      purpose: item.purpose ?? "",
+      price,
+      mustHave: Boolean(essential),
+      shoppable: !essential?.activity && Boolean(price),
+    };
+  });
+  const missing: Row[] = ESSENTIALS[pet.species]
+    .filter((essential) => !covered.has(essential))
+    .map((essential) => ({ name: essential.name, purpose: essential.purpose, mustHave: true, shoppable: !essential.activity }));
+  const rows = [...fromAgent.filter((row) => row.mustHave), ...missing, ...fromAgent.filter((row) => !row.mustHave)];
+  const storesUrl = nearbySearchUrl(STORE_SEARCH[pet.species], pet);
+
+  return (
+    <>
+      {storesUrl ? (
+        <a
+          href={storesUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-4 flex items-center gap-2 rounded-2xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground hover:bg-accent"
+        >
+          <MapPin className="size-4 text-primary" />
+          Stores near {pet.location_label || "you"}
+          <ExternalLink className="ml-auto size-3.5" />
+        </a>
+      ) : (
+        <Link
+          href={`/pets/${pet.id}/edit`}
+          className="mb-4 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <MapPin className="size-4" />
+          Add where {pet.name} lives to find these nearby
+        </Link>
+      )}
+      <ul className="space-y-3">
+        {rows.map((row, i) => {
+          const nearby = row.shoppable ? nearbySearchUrl(row.name, pet) : null;
+          return (
+            <li key={`${i}-${row.name}`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex flex-wrap items-center gap-x-2 font-semibold">
+                  {row.name}
+                  {row.mustHave && (
+                    <span className="rounded-full bg-materials-soft px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide text-materials">
+                      Must-have
+                    </span>
+                  )}
+                </p>
+                <Price range={row.price} />
+              </div>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {row.purpose}
+                {nearby && (
+                  <>
+                    {" "}
+                    <a
+                      href={nearby}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="whitespace-nowrap font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      Find nearby
+                    </a>
+                  </>
+                )}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
   const c = report.content as Record<string, any>;
 
   switch (report.category) {
     case "diet":
       return (
         <>
-          <p className="text-sm">
-            <span className="font-medium">{c.primary_food?.name}</span>
-            {c.primary_food?.brand_examples?.length
-              ? ` — ${c.primary_food.brand_examples.join(", ")}`
-              : ""}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {money(c.primary_food?.price_range)}/mo
-          </p>
-          <p className="mt-2 text-sm">{c.feeding_instructions}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-semibold">{c.primary_food?.name}</p>
+            <Price range={c.primary_food?.price_range} suffix="/mo" />
+          </div>
+          {c.primary_food?.brand_examples?.length > 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">{c.primary_food.brand_examples.join(", ")}</p>
+          )}
+          <p className="mt-3 text-sm">{c.feeding_instructions}</p>
           {c.cautions?.length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm font-medium">Cautions</p>
+            <Section title="Cautions">
               <List items={c.cautions} />
-            </div>
+            </Section>
           )}
         </>
       );
     case "hygiene":
       return (
-        <div className="space-y-2 text-sm">
-          <p>
-            <span className="font-medium">Bathing</span> — every {c.bathing?.frequency_days}d.{" "}
-            {c.bathing?.notes}
-          </p>
-          <p>
-            <span className="font-medium">Dental</span> — every {c.dental_care?.frequency_days}d.{" "}
-            {c.dental_care?.notes}
-            {c.dental_care?.dental_treats?.length
-              ? ` (${c.dental_care.dental_treats.join(", ")})`
-              : ""}
-          </p>
-          <p>
-            <span className="font-medium">Cleanup</span> — every {c.cleanup?.frequency_days}d.{" "}
-            {c.cleanup?.notes}
-          </p>
+        <>
+          <div className="space-y-3">
+            <Routine name="Bathing" days={c.bathing?.frequency_days} notes={c.bathing?.notes} />
+            <Routine
+              name="Dental care"
+              days={c.dental_care?.frequency_days}
+              notes={
+                <>
+                  {c.dental_care?.notes}
+                  {c.dental_care?.dental_treats?.length ? ` (${c.dental_care.dental_treats.join(", ")})` : ""}
+                </>
+              }
+            />
+            <Routine name="Cleanup" days={c.cleanup?.frequency_days} notes={c.cleanup?.notes} />
+          </div>
           {c.supplies?.length > 0 && (
-            <div className="mt-3">
-              <p className="font-medium">Supplies</p>
+            <Section title="Supplies">
               <List items={c.supplies} />
-            </div>
+            </Section>
           )}
-        </div>
+        </>
       );
     case "health":
       return (
         <>
-          <p className="text-sm">Vet checkups every {c.checkup_frequency_days} days</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-semibold">Vet checkups</p>
+            <Tag>{frequencyLabel(c.checkup_frequency_days)}</Tag>
+          </div>
           {c.vaccinations?.length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm font-medium">Vaccinations</p>
+            <Section title="Vaccinations">
               <List items={c.vaccinations} />
-            </div>
+            </Section>
           )}
           {c.warning_signs?.length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm font-medium">Warning signs</p>
+            <Section title="Warning signs">
               <List items={c.warning_signs} />
-            </div>
+            </Section>
           )}
         </>
       );
     case "insurance":
+      if (c.providers?.length === 0) {
+        return (
+          <p className="text-sm text-muted-foreground">
+            None of the insurers we track cover this kind of pet. An exotics vet can tell you about
+            wellness plans or savings options instead.
+          </p>
+        );
+      }
       return (
-        <ul className="space-y-2 text-sm">
+        <ul className="space-y-3">
           {c.providers?.map((p: any, i: number) => {
             const provider = INSURANCE_PROVIDERS[p.provider_key as InsuranceProviderKey];
             return (
               <li key={i}>
-                {provider ? (
-                  <a
-                    href={provider.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline"
-                  >
-                    {provider.name}
-                  </a>
-                ) : (
-                  <span className="font-medium">{p.provider_key}</span>
-                )}{" "}
-                — {money(p.estimated_monthly_range)}/mo
-                <p className="text-muted-foreground">{p.notes}</p>
+                <div className="flex items-center justify-between gap-3">
+                  {provider ? (
+                    <a
+                      href={provider.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      {provider.name}
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  ) : (
+                    <span className="font-semibold">{p.provider_key}</span>
+                  )}
+                  <Price range={p.estimated_monthly_range} suffix="/mo" />
+                </div>
+                <p className="mt-0.5 text-sm text-muted-foreground">{p.notes}</p>
               </li>
             );
           })}
         </ul>
       );
     case "materials":
-      return (
-        <ul className="space-y-2 text-sm">
-          {c.items?.map((item: any, i: number) => (
-            <li key={i}>
-              <span className="font-medium">{item.name}</span> — {money(item.price_range)}
-              <p className="text-muted-foreground">{item.purpose}</p>
-            </li>
-          ))}
-        </ul>
-      );
+      return <MaterialsBody items={c.items ?? []} pet={pet} />;
     default:
       return null;
   }
 }
 
-export function CareReportCard({ report }: { report: CareReport }) {
+export function CareReportCard({ report, pet }: { report: CareReport; pet: Pet }) {
+  const meta = CATEGORY_META[report.category];
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <h3 className="font-semibold">{CATEGORY_LABELS[report.category] ?? report.category}</h3>
-      <div className="mt-3">
-        <CategoryBody report={report} />
+    <article className="flex flex-col rounded-3xl border border-border bg-card p-5 shadow-sm">
+      <header className="flex items-center gap-3">
+        <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${meta?.tint ?? "bg-muted"}`}>
+          {meta && <meta.Icon className="size-5" />}
+        </span>
+        <h3 className="text-lg font-semibold">{meta?.label ?? report.category}</h3>
+      </header>
+      <div className="mt-4 flex-1">
+        <CategoryBody report={report} pet={pet} />
       </div>
-    </div>
+    </article>
   );
 }

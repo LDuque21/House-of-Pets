@@ -19,13 +19,17 @@ CREATE TABLE IF NOT EXISTS pets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL, -- Neon Managed Auth user id (neon_auth.user.id)
   name TEXT NOT NULL,
-  species TEXT NOT NULL CHECK (species IN ('dog', 'cat', 'rabbit')),
+  species TEXT NOT NULL CHECK (species IN ('dog', 'cat', 'rabbit', 'fish', 'bird', 'horse', 'reptile', 'hamster')),
   breed TEXT,
   age_stage TEXT NOT NULL CHECK (age_stage IN ('baby', 'adult', 'senior')),
   confidence TEXT CHECK (confidence IN ('high', 'medium', 'low')),
   photo_url TEXT,
   notes TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Where the pet lives: a typed place and/or browser GPS coordinates.
+  location_label TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION
 );
 
 CREATE INDEX IF NOT EXISTS pets_user_id_idx ON pets(user_id);

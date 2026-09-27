@@ -11,8 +11,11 @@ export const GEMINI_MODEL = "gemini-flash-latest";
 // GEMINI_API_KEY when a category-specific key isn't set.
 const clients = new Map<string, GoogleGenAI>();
 
-function getClient(category: Category): GoogleGenAI {
-  const envVar = `GEMINI_API_KEY_${category.toUpperCase()}`;
+// "vision" is the photo-identification agent; it runs before a pet exists.
+export type Agent = Category | "vision";
+
+function getClient(agent: Agent): GoogleGenAI {
+  const envVar = `GEMINI_API_KEY_${agent.toUpperCase()}`;
   const apiKey = process.env[envVar] || process.env.GEMINI_API_KEY;
   const cacheKey = apiKey ?? "default";
 
@@ -48,20 +51,25 @@ function retryDelayMs(err: unknown): number | null {
 // The model is also prone to transient 503 (overloaded) responses -- also
 // confirmed during setup testing, not hypothetical.
 export async function generateStructuredJson<T>(params: {
-  category: Category;
+  agent: Agent;
   systemPrompt: string;
   prompt: string;
   schema: object;
+  // Optional photo, sent inline alongside the prompt (base64, no data: prefix).
+  image?: { mimeType: string; data: string };
 }): Promise<T> {
-  const { category, systemPrompt, prompt, schema } = params;
-  const ai = getClient(category);
+  const { agent, systemPrompt, prompt, schema, image } = params;
+  const ai = getClient(agent);
+  const contents = image
+    ? [{ role: "user", parts: [{ inlineData: image }, { text: prompt }] }]
+    : prompt;
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await ai.models.generateContent({
         model: GEMINI_MODEL,
-        contents: prompt,
+        contents,
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",

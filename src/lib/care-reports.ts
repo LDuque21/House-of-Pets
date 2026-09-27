@@ -38,6 +38,14 @@ export async function listCareReportsForPet(petId: string): Promise<CareReport[]
 
 type DerivedTask = { task_name: string; frequency_days: number };
 
+// The schemas ask for whole days, but guard anyway: tasks.frequency_days is an
+// INTEGER column, so round (never below daily), and 0 means "not routinely
+// needed" -- no task at all.
+function wholeDays(value: unknown): number | null {
+  if (typeof value !== "number" || !(value > 0)) return null;
+  return Math.max(1, Math.round(value));
+}
+
 function deriveTasksForCategory(category: Category, content: Record<string, unknown>): DerivedTask[] {
   switch (category) {
     case "diet":
@@ -46,16 +54,17 @@ function deriveTasksForCategory(category: Category, content: Record<string, unkn
       const bathing = content.bathing as { frequency_days?: number } | undefined;
       const dental = content.dental_care as { frequency_days?: number } | undefined;
       const cleanup = content.cleanup as { frequency_days?: number } | undefined;
+      const bathDays = wholeDays(bathing?.frequency_days);
+      const dentalDays = wholeDays(dental?.frequency_days);
+      const cleanupDays = wholeDays(cleanup?.frequency_days);
       const tasks: DerivedTask[] = [];
-      if (bathing?.frequency_days) tasks.push({ task_name: "Bath", frequency_days: bathing.frequency_days });
-      if (dental?.frequency_days)
-        tasks.push({ task_name: "Brush teeth", frequency_days: dental.frequency_days });
-      if (cleanup?.frequency_days)
-        tasks.push({ task_name: "Litter box / cleanup", frequency_days: cleanup.frequency_days });
+      if (bathDays) tasks.push({ task_name: "Bath", frequency_days: bathDays });
+      if (dentalDays) tasks.push({ task_name: "Dental care", frequency_days: dentalDays });
+      if (cleanupDays) tasks.push({ task_name: "Cleanup", frequency_days: cleanupDays });
       return tasks;
     }
     case "health": {
-      const days = content.checkup_frequency_days as number | undefined;
+      const days = wholeDays(content.checkup_frequency_days);
       return days ? [{ task_name: "Vet checkup", frequency_days: days }] : [];
     }
     case "insurance":
@@ -93,7 +102,7 @@ export type Task = {
 
 export async function listTasksForPet(petId: string): Promise<Task[]> {
   const { rows } = await pool.query<Task>(
-    `SELECT * FROM tasks WHERE pet_id = $1 ORDER BY next_due ASC`,
+    `SELECT * FROM tasks WHERE pet_id = $1 ORDER BY frequency_days ASC, task_name ASC`,
     [petId]
   );
   return rows;
