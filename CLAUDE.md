@@ -114,10 +114,10 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 
 **Done and live (as of ~4am Sep 27):** everything above — auth, 24 species, photo identification, pet photos/edit/remove, profile photo, location + find-nearby, Amazon product picks, age/condition-aware health, Adjust (add vs change), routine screen + calendar, cost planning for uninsured species, redesigned light/dark UI with the user's silhouettes, PWA, DigitalOcean deploy. README refreshed. Devpost draft in `docs/devpost.md` (still has [bracketed] spots for the user's own words). End-to-end agent tests passed on throwaway pets (full plans, add/change, must-have removal, several new species).
 
-**URGENT at ~4am:** `https://project-gibby.com` (the apex, which the QR code and docs use) fails TLS with "unrecognized name" from outside, while `https://www.project-gibby.com` and the `.ondigitalocean.app` URL work. DNS for the apex still points at DigitalOcean, so the app's domain list likely lost the apex when `www` was added (or it's stuck pending). Fix in DigitalOcean → Apps → house-of-pets → Settings → Domains: both `project-gibby.com` and `www.project-gibby.com` must be listed and Active. Fallback: regenerate the QR code for `https://www.project-gibby.com`.
+**Domains (checked ~5:30am):** both `project-gibby.com` and `www.project-gibby.com` are Active in DigitalOcean and correct on Google/Cloudflare/Quad9 DNS. Some networks' DNS resolvers (e.g. the Wi-Fi at 23.252.205.6) still cache GoDaddy's old parking IPs (15.197.148.33, 3.33.130.190) from before the nameserver switch, which fails TLS with "unrecognized name"; this clears itself as caches expire (worst case ~48h after the switch). For the demo: keep project-gibby.com as the main link, keep `https://house-of-pets-qmu5o.ondigitalocean.app` as a backup (works everywhere), and have anyone who gets a certificate error switch to mobile data.
 
 **Remaining before the 11am deadline (priority order):**
-1. Fix the apex domain (above); verify both domains load.
+1. Have the backup URL ready for the demo (see Domains above).
 2. Live test on the phone (install the PWA, add a pet by photo, generate a plan).
 3. Fill the [bracketed] parts of `docs/devpost.md` and paste into Devpost.
 4. Demo video; submit by ~10am for buffer.
