@@ -111,13 +111,16 @@ export function frequencyLabel(days: number | null | undefined): string {
 }
 
 // Google Maps search for `what` near where the pet lives (GPS if set, else the
-// typed place). Plain URL, so no Maps API key is needed.
+// typed place). Plain URL, so no Maps API key is needed. The query always
+// names the animal: "Secure space" alone can turn up a zoo, while "Secure
+// space for pet raccoon" finds stores.
 export function nearbySearchUrl(
   what: string,
-  home: Pick<Pet, "location_label" | "latitude" | "longitude">
+  pet: Pick<Pet, "species" | "location_label" | "latitude" | "longitude">
 ): string | null {
   const where =
-    home.latitude != null && home.longitude != null ? `${home.latitude},${home.longitude}` : home.location_label;
+    pet.latitude != null && pet.longitude != null ? `${pet.latitude},${pet.longitude}` : pet.location_label;
   if (!where) return null;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${what} near ${where}`)}`;
+  const query = `${what} for pet ${SPECIES_LABELS[pet.species].toLowerCase()} near ${where}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
