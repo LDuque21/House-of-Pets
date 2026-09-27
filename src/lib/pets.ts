@@ -21,6 +21,10 @@ export type Pet = {
   location_label: string | null;
   latitude: number | null;
   longitude: number | null;
+  // Exact age if the owner knows it; age_stage is always set.
+  age_years: number | null;
+  // Known health conditions as the owner typed them, comma-separated.
+  conditions: string | null;
   created_at: string;
 };
 
@@ -35,17 +39,19 @@ export type PetInput = {
   location_label: string | null;
   latitude: number | null;
   longitude: number | null;
+  age_years: number | null;
+  conditions: string | null;
 };
 
 export async function createPet(userId: string, pet: PetInput): Promise<Pet> {
   const { rows } = await pool.query<Pet>(
     `INSERT INTO pets (user_id, name, species, breed, age_stage, notes, photo_url, confidence,
-                       location_label, latitude, longitude)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                       location_label, latitude, longitude, age_years, conditions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING *`,
     [
       userId, pet.name, pet.species, pet.breed, pet.age_stage, pet.notes, pet.photo_url, pet.confidence,
-      pet.location_label, pet.latitude, pet.longitude,
+      pet.location_label, pet.latitude, pet.longitude, pet.age_years, pet.conditions,
     ]
   );
   return rows[0];
@@ -54,12 +60,13 @@ export async function createPet(userId: string, pet: PetInput): Promise<Pet> {
 export async function updatePetForUser(petId: string, userId: string, pet: PetInput): Promise<Pet | null> {
   const { rows } = await pool.query<Pet>(
     `UPDATE pets SET name = $3, species = $4, breed = $5, age_stage = $6, notes = $7, photo_url = $8,
-                     confidence = $9, location_label = $10, latitude = $11, longitude = $12
+                     confidence = $9, location_label = $10, latitude = $11, longitude = $12,
+                     age_years = $13, conditions = $14
      WHERE id = $1 AND user_id = $2
      RETURNING *`,
     [
       petId, userId, pet.name, pet.species, pet.breed, pet.age_stage, pet.notes, pet.photo_url, pet.confidence,
-      pet.location_label, pet.latitude, pet.longitude,
+      pet.location_label, pet.latitude, pet.longitude, pet.age_years, pet.conditions,
     ]
   );
   return rows[0] ?? null;

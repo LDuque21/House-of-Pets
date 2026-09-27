@@ -23,11 +23,31 @@ const BABY_LABELS: Record<Species, string> = {
   hamster: "Pup",
 };
 
-// e.g. "Cat · Tabby · Adult", "Dog · Puppy"
-export function petSummary(pet: Pick<Pet, "species" | "breed" | "age_stage">): string {
+function yearsLabel(years: number | null): string | null {
+  if (years == null) return null;
+  if (years === 0) return "Under 1 year";
+  return years === 1 ? "1 year" : `${years} years`;
+}
+
+// e.g. "Cat · Tabby · Adult", "Dog · Puppy", "Dog · Beagle · Senior · 9 years"
+export function petSummary(pet: Pick<Pet, "species" | "breed" | "age_stage" | "age_years">): string {
   const age =
     pet.age_stage === "baby" ? BABY_LABELS[pet.species] : pet.age_stage === "senior" ? "Senior" : "Adult";
-  return [SPECIES_LABELS[pet.species], pet.breed, age].filter(Boolean).join(" · ");
+  return [SPECIES_LABELS[pet.species], pet.breed, age, yearsLabel(pet.age_years)].filter(Boolean).join(" · ");
+}
+
+// "diabetes, arthritis" -> ["diabetes", "arthritis"]
+export function conditionList(conditions: string | null): string[] {
+  return (conditions ?? "")
+    .split(/[,;\n]/)
+    .map((c) => c.trim())
+    .filter(Boolean);
+}
+
+// An Amazon search for the exact product name. The model can't know real
+// product IDs, so a product-page link would be invented; a search always lands.
+export function amazonSearchUrl(productName: string): string {
+  return `https://www.amazon.com/s?k=${encodeURIComponent(productName)}`;
 }
 
 // 0 (or missing) is the schemas' "not routinely needed".

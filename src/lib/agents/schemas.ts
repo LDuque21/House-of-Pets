@@ -18,52 +18,75 @@ const FREQUENCY_DAYS = {
   description: "Whole days between occurrences: 1 means daily or more often, 0 means not routinely needed.",
 };
 
+// A real product the owner can buy on Amazon. The card links each one to an
+// Amazon search for product_name, so the name must be specific enough to find.
+const PRODUCT_OPTION = {
+  type: "object",
+  properties: {
+    product_name: {
+      type: "string",
+      description: "Brand plus product line as sold on Amazon, e.g. 'Virbac C.E.T. Enzymatic Toothpaste, Poultry Flavor'.",
+    },
+    price_range: PRICE_RANGE,
+  },
+  required: ["product_name", "price_range"],
+};
+
 export const DIET_SCHEMA = {
   type: "object",
   properties: {
     category: { type: "string", enum: ["diet"] },
-    primary_food: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        brand_examples: { type: "array", items: { type: "string" }, maxItems: 3 },
-        price_range: PRICE_RANGE,
+    food_options: {
+      type: "array",
+      minItems: 1,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: {
+          ...PRODUCT_OPTION.properties,
+          package: { type: "string", description: "What the price buys, e.g. '15 lb bag' or '12 x 3 oz cans'." },
+          note: { type: "string", description: "Why this option, in a few words." },
+        },
+        required: ["product_name", "package", "price_range", "note"],
       },
-      required: ["name", "brand_examples", "price_range"],
     },
     feeding_instructions: { type: "string" },
     cautions: { type: "array", items: { type: "string" }, maxItems: 2 },
   },
-  required: ["category", "primary_food", "feeding_instructions", "cautions"],
+  required: ["category", "food_options", "feeding_instructions", "cautions"],
+};
+
+const ROUTINE = {
+  type: "object",
+  properties: { frequency_days: FREQUENCY_DAYS, notes: { type: "string" } },
+  required: ["frequency_days", "notes"],
 };
 
 export const HYGIENE_SCHEMA = {
   type: "object",
   properties: {
     category: { type: "string", enum: ["hygiene"] },
-    bathing: {
-      type: "object",
-      properties: { frequency_days: FREQUENCY_DAYS, notes: { type: "string" } },
-      required: ["frequency_days", "notes"],
-    },
-    dental_care: {
-      type: "object",
-      properties: {
-        frequency_days: FREQUENCY_DAYS,
-        dental_treats: { type: "array", items: { type: "string" }, maxItems: 2 },
-        notes: { type: "string" },
-      },
-      required: ["frequency_days", "dental_treats", "notes"],
-    },
+    bathing: ROUTINE,
+    dental_care: ROUTINE,
     cleanup: {
-      type: "object",
+      ...ROUTINE,
       description: "Litter box, cage, tank, or stall cleanup, or picking up waste for dogs.",
-      properties: { frequency_days: FREQUENCY_DAYS, notes: { type: "string" } },
-      required: ["frequency_days", "notes"],
     },
-    supplies: { type: "array", items: { type: "string" }, maxItems: 4 },
+    products: {
+      type: "array",
+      minItems: 1,
+      maxItems: 4,
+      items: {
+        type: "object",
+        properties: {
+          need: { type: "string", description: "What it's for, e.g. 'Toothpaste', 'Shampoo', 'Litter'." },
+          options: { type: "array", minItems: 1, maxItems: 3, items: PRODUCT_OPTION },
+        },
+        required: ["need", "options"],
+      },
+    },
   },
-  required: ["category", "bathing", "dental_care", "cleanup", "supplies"],
+  required: ["category", "bathing", "dental_care", "cleanup", "products"],
 };
 
 export const HEALTH_SCHEMA = {
@@ -73,8 +96,59 @@ export const HEALTH_SCHEMA = {
     checkup_frequency_days: FREQUENCY_DAYS,
     vaccinations: { type: "array", items: { type: "string" }, maxItems: 3 },
     warning_signs: { type: "array", items: { type: "string" }, maxItems: 4 },
+    screenings: {
+      type: "array",
+      maxItems: 3,
+      description: "Age-based screenings recommended NOW, beyond the routine exam.",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Short, e.g. 'Senior blood panel'." },
+          frequency_days: FREQUENCY_DAYS,
+          why: { type: "string", description: "What it catches, one short sentence." },
+        },
+        required: ["name", "frequency_days", "why"],
+      },
+    },
+    upcoming_milestones: {
+      type: "array",
+      maxItems: 2,
+      description: "Screenings that start at a later age. Empty for seniors.",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          starts: { type: "string", description: "When it starts, e.g. 'From age 7'." },
+          why: { type: "string" },
+        },
+        required: ["name", "starts", "why"],
+      },
+    },
+    condition_care: {
+      type: "array",
+      maxItems: 3,
+      description: "One entry per known health condition. Empty if none were given.",
+      items: {
+        type: "object",
+        properties: {
+          condition: { type: "string" },
+          what_to_do: { type: "string", description: "Day-to-day management, one or two short sentences." },
+          vet_followup_days: FREQUENCY_DAYS,
+          red_flags: { type: "string", description: "Signs this condition needs a vet urgently, one sentence." },
+        },
+        required: ["condition", "what_to_do", "vet_followup_days", "red_flags"],
+      },
+    },
   },
-  required: ["category", "checkup_frequency_days", "vaccinations", "warning_signs"],
+  required: [
+    "category",
+    "checkup_frequency_days",
+    "vaccinations",
+    "warning_signs",
+    "screenings",
+    "upcoming_milestones",
+    "condition_care",
+  ],
 };
 
 // The provider enum is narrowed to insurers that cover the pet's species, so

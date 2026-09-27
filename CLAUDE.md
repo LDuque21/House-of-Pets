@@ -39,7 +39,7 @@ src/app/
 src/lib/
   db.ts                        pg Pool singleton (DATABASE_URL)
   pets.ts                      SPECIES / AGE_STAGES lists, Pet type, CRUD scoped to user_id
-  care-reports.ts              save/list reports (newest per category), task derivation, list tasks (by frequency)
+  care-reports.ts              save/list reports (newest per category), task derivation + upsert, list tasks (by due date), completeTaskForUser
   gemini.ts                    client per agent key + generateStructuredJson() (optional inline image, 429/503 retry)
   format.ts                    petSummary ("Dog · Beagle · Puppy"), frequencyLabel ("Weekly"), nearbySearchUrl (Google Maps)
   agents/
@@ -53,7 +53,8 @@ src/lib/
 src/components/
   pet-form.tsx                 add/edit form: photo upload (browser-resized) -> vision prefill, species/age tiles, location (typed or GPS); DeletePetForm
   animal-silhouettes.tsx       AnimalSilhouette (mask over currentColor), PawPrint, PetAvatar (photo or silhouette), SPECIES_TINTS
-  care-report-card.tsx         one card per category; materials merges must-haves + agent extras with "Find nearby" links
+  care-report-card.tsx         one card per category; diet/hygiene product picks with Amazon links; health screenings + condition care; materials merges must-haves + agent extras with "Find nearby" links
+  care-routine.tsx             (client) task list with due labels + "Mark done", month calendar
   generate-care-plan-form.tsx  generate button, "5 specialists working" chips, plain-language failure messages
   site-header.tsx, theme-toggle.tsx, submit-button.tsx, category-meta.ts, ui/button.tsx (added `pill` and `xl` sizes)
 
@@ -66,17 +67,20 @@ schema.sql                         current schema (CREATE TABLE IF NOT EXISTS �
 ## Agent system
 
 - **Five category agents** (Diet, Hygiene, Health, Insurance, Materials): one Gemini call each, own system prompt + JSON schema, run in parallel. Each saves its own report; one failing doesn't block the others, and the UI says which failed and why (raw error under "Details"). Before saving, the orchestrator checks the response has the schema's required top-level keys — otherwise a malformed answer would replace the last good report with a blank card.
-- **Output is deliberately concise** (user feedback: scannable in seconds). Diet: one food + 2-3 brands + price, one feeding sentence, ≤2 cautions. Hygiene: bathing / dental / cleanup (litter, cage, tank or stall) + supplies. Health: checkup frequency, ≤3 vaccinations (none for species that aren't vaccinated), ≤4 warning signs.
+- **Output is deliberately concise** (user feedback: scannable in seconds). Diet: up to 3 food products (package, price, short why), one feeding sentence, ≤2 cautions. Hygiene: bathing / dental / cleanup (litter, cage, tank or stall) + 2-4 product needs with up to 3 products each (no filler like trash bags). Health: checkup frequency, ≤3 vaccinations (none for species that aren't vaccinated), ≤4 warning signs, ≤3 age-based screenings due now ("like a colonoscopy at 45"), ≤2 upcoming milestones (non-seniors), and condition care per known condition.
+- **Product links are Amazon only** (user's choice), built in code as Amazon *searches* for the product name (`amazonSearchUrl`) — the model can't know ASINs, so product-page links would be invented. Cards still render the pre-Sep-27 report shapes (`primary_food`, `supplies`) until a pet is regenerated.
+- **Pet profile feeds every agent**: optional `age_years` and free-text `conditions` (comma-separated, shown as chips). Insurance notes must mention pre-existing-condition handling when conditions exist; the health card says "follow your vet's plan".
 - **Insurance** picks only from `insurance-providers.ts` (Trupanion, Healthy Paws, Embrace, Figo, ASPCA, Nationwide); the enum is filtered to insurers covering the species. Dogs/cats: 3-5 of all six. Rabbit, bird, reptile, hamster: Nationwide only. Horse: ASPCA only. Fish: nobody — the insurance agent is skipped and the card says so.
 - **Materials**: the species' must-haves from `essentials.ts` (e.g. cat: litter box, food, bowls, scratching post, toys, hiding spot, carrier, daily play) are passed to the agent to price, and the card always shows them ("Must-have") plus the agent's extras. Activities (daily play/walks) get no shopping link.
 - **Vision agent** (`vision.ts`) runs before a pet exists, outside the orchestrator. Unsupported animal → exactly "This animal type is not currently supported by this application" (user-specified); no animal → its own message.
-- **Tasks** are derived after each successful category: diet → Feed (daily); hygiene → Bath / Dental care / Cleanup; health → Vet checkup. Frequencies are integers (`tasks.frequency_days` is INTEGER); 0 = "not routinely needed" (no task, "As needed" on cards). The Care routine shows frequencies only — the user explicitly removed due dates.
+- **Tasks** are derived after each successful category: diet → Feed (daily); hygiene → Bath / Dental care / Cleanup; health → Vet checkup + each screening + "<Condition> vet follow-up". Frequencies are integers (`tasks.frequency_days` is INTEGER); 0 = "not routinely needed" (no task, "As needed" on cards).
+- **Care routine is a live tracker** (user reversed the earlier "no due dates" call on Sep 27): due labels, overdue highlighting, "Mark done" (`completeTaskAction` → `last_done_on` = today, `next_due` = today + frequency), and a month calendar (`care-routine.tsx`, client) projecting non-daily tasks. Tasks are upserted on `(pet_id, category, task_name)` so regenerating keeps history; new tasks start due today. "Today" is America/New_York (`TODAY` in `care-reports.ts`).
 
 ## Database
 
-Real data exists (the user's pets "Gibby" (cat) and "Biscuit" (rabbit, with stale old-format reports until regenerated)). **Schema changes are one-off `ALTER` scripts run once**, then mirrored into `schema.sql` — never drop-and-recreate. Changes applied so far: categories `behavior` → `materials`; `pets_species_check` widened to 8 species; `pets.location_label`, `latitude`, `longitude` added.
+Real data exists (the user's pets "Gibby" (cat) and "Biscuit" (rabbit, with stale old-format reports until regenerated)). **Schema changes are one-off `ALTER` scripts run once**, then mirrored into `schema.sql` — never drop-and-recreate. Changes applied so far: categories `behavior` → `materials`; `pets_species_check` widened to 8 species; `pets.location_label`, `latitude`, `longitude` added; (Sep 27) `pets.age_years`, `pets.conditions`, `tasks.last_done_on`, unique index `tasks_pet_category_name_key`.
 
-Tables: `pets` (name, species, breed, age_stage, confidence, photo_url as a data: URL, notes, location fields), `care_reports` (category, JSONB content, model), `tasks` (derived: task_name, frequency_days, next_due — next_due is no longer shown).
+Tables: `pets` (name, species, breed, age_stage, age_years, conditions, confidence, photo_url as a data: URL, notes, location fields), `care_reports` (category, JSONB content, model), `tasks` (derived: task_name, frequency_days, next_due, last_done_on).
 
 ## UI / design system
 
@@ -117,7 +121,7 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 3. Devpost writeup — story: 5 specialist Gemini agents in parallel with enforced JSON schemas + a Gemini vision agent + grounded insurer list; dashboard not chatbot (Microsoft); DigitalOcean + GoDaddy prize tracks. A QR code for https://project-gibby.com was generated for the slides.
 4. README refresh — it still says "early scaffold", four categories, dog/cat/rabbit.
 5. Demo video; submit by ~10am for buffer.
-6. Only if time remains: refine box per card, checkable tasks, ML first-guess.
+6. Only if time remains: refine box per card, .ics calendar export, ML first-guess. (Checkable tasks: done Sep 27.)
 
 ## Working agreement
 

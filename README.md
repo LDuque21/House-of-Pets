@@ -10,7 +10,10 @@ Built solo for ShellHacks 2026.
 
 - **Eight species:** dog, cat, rabbit, fish, bird, horse, reptile, hamster.
 - **Add a pet by photo or by hand.** The vision agent pre-fills the form; you confirm or correct it.
-- **Five-category care plan**, kept short enough to scan in seconds: one recommended food with brands and prices, bathing/dental/cleanup routines, checkup frequency and warning signs, matching insurers, and a shopping list.
+- **Five-category care plan**, kept short enough to scan in seconds: three food picks, bathing/dental/cleanup routines with the products to buy, checkups and warning signs, matching insurers, and a shopping list.
+- **Shop in one tap.** Diet and Hygiene recommend up to three real products per need (food, toothbrush, toothpaste, shampoo, litter…) with price ranges, each linked to Amazon.
+- **Health that fits the pet's age and conditions.** Age-based screenings (the pet version of "get a colonoscopy at 45"), upcoming milestones for younger pets, and day-to-day care plus red flags for known conditions like diabetes or arthritis. Every agent sees the conditions, so diet suggests suitable foods and insurance flags pre-existing-condition exclusions.
+- **A live care routine.** Tasks show when they're due, overdue ones stand out, "Mark done" schedules the next one, and a month calendar shows what's coming.
 - **Grounded insurance picks.** The insurance agent can only choose from a vetted list of real insurers (Trupanion, Healthy Paws, Embrace, Figo, ASPCA, Nationwide), filtered to those that actually cover the species. Fish get an honest "no insurers cover this" instead of a made-up answer.
 - **Must-have supplies** for each species are always listed, with "Find nearby" links based on the pet's home location (typed in, or taken from your phone's GPS).
 - **Pet profiles** with photos, editing and removal; account profile photo.

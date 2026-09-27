@@ -8,19 +8,19 @@ export const CATEGORY_META: Record<Category, { label: string; Icon: LucideIcon; 
     label: "Diet",
     Icon: Utensils,
     tint: "bg-diet-soft text-diet",
-    blurb: "The right food, how much to feed, and what it costs.",
+    blurb: "Three food picks with prices and Amazon links, and how much to feed.",
   },
   hygiene: {
     label: "Hygiene",
     Icon: Bath,
     tint: "bg-hygiene-soft text-hygiene",
-    blurb: "Bathing, dental care, and litter or cleanup routines.",
+    blurb: "Bathing, dental care and cleanup routines, with the products to buy.",
   },
   health: {
     label: "Health",
     Icon: HeartPulse,
     tint: "bg-health-soft text-health",
-    blurb: "Checkups, key vaccines, and warning signs to watch for.",
+    blurb: "Checkups, age-based screenings, care for known conditions, and warning signs.",
   },
   insurance: {
     label: "Insurance",

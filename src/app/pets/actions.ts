@@ -17,6 +17,7 @@ import {
 } from "@/lib/pets";
 import { buildCareHub, type CategoryResult } from "@/lib/agents/orchestrator";
 import { identifyPet, type Identification } from "@/lib/agents/vision";
+import { completeTaskForUser } from "@/lib/care-reports";
 
 const CONFIDENCES: Confidence[] = ["high", "medium", "low"];
 // Photos are resized in the browser to ~640px JPEG (well under this).
@@ -57,6 +58,7 @@ function parsePetForm(formData: FormData): PetInput {
   const latitude = optionalNumber(formData, "latitude", 90);
   const longitude = optionalNumber(formData, "longitude", 180);
   const hasCoordinates = latitude !== null && longitude !== null;
+  const ageYears = optionalNumber(formData, "age_years", 100);
   return {
     name,
     species: species as Species,
@@ -68,6 +70,8 @@ function parsePetForm(formData: FormData): PetInput {
     location_label: optionalText(formData, "location_label"),
     latitude: hasCoordinates ? latitude : null,
     longitude: hasCoordinates ? longitude : null,
+    age_years: ageYears !== null && ageYears >= 0 ? Math.round(ageYears) : null,
+    conditions: optionalText(formData, "conditions")?.slice(0, 300) ?? null,
   };
 }
 
@@ -107,7 +111,17 @@ export async function deletePetAction(formData: FormData) {
   redirect("/pets");
 }
 
-export type GenerateCarePlanState = { results: CategoryResult[] } | null;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function completeTaskAction(formData: FormData) {
+  const user = await requireUser();
+  const taskId = String(formData.get("task_id") ?? "");
+  if (!UUID.test(taskId)) throw new Error("Invalid task");
+  const petId = await completeTaskForUser(taskId, user.id);
+  if (petId) revalidatePath(`/pets/${petId}`);
+}
+
+export type GenerateCarePlanState ={ results: CategoryResult[] } | null;
 
 export async function generateCarePlanAction(
   _prevState: GenerateCarePlanState,

@@ -64,8 +64,21 @@ function deriveTasksForCategory(category: Category, content: Record<string, unkn
       return tasks;
     }
     case "health": {
-      const days = wholeDays(content.checkup_frequency_days);
-      return days ? [{ task_name: "Vet checkup", frequency_days: days }] : [];
+      const tasks: DerivedTask[] = [];
+      const checkupDays = wholeDays(content.checkup_frequency_days);
+      if (checkupDays) tasks.push({ task_name: "Vet checkup", frequency_days: checkupDays });
+      for (const s of (content.screenings ?? []) as { name?: string; frequency_days?: number }[]) {
+        const days = wholeDays(s.frequency_days);
+        if (s.name && days) tasks.push({ task_name: s.name, frequency_days: days });
+      }
+      for (const cc of (content.condition_care ?? []) as { condition?: string; vet_followup_days?: number }[]) {
+        const days = wholeDays(cc.vet_followup_days);
+        if (cc.condition && days) {
+          const name = cc.condition.charAt(0).toUpperCase() + cc.condition.slice(1);
+          tasks.push({ task_name: `${name} vet follow-up`, frequency_days: days });
+        }
+      }
+      return tasks;
     }
     case "insurance":
     case "materials":
@@ -73,22 +86,36 @@ function deriveTasksForCategory(category: Category, content: Record<string, unkn
   }
 }
 
+// "Today" for due dates. Users and the demo are in the US, and the database
+// clock is UTC, which would roll tasks over at 8pm Eastern. Per-user time
+// zones would be the proper fix.
+const TODAY = `(now() AT TIME ZONE 'America/New_York')::date`;
+
+// Upserts by name so regenerating a plan keeps each task's completion history:
+// a task done before stays scheduled from its last completion. New tasks start
+// due today. Tasks the new plan no longer includes are removed.
 export async function deriveAndSaveTasks(
   petId: string,
   category: Category,
   content: Record<string, unknown>
 ): Promise<void> {
-  const tasks = deriveTasksForCategory(category, content);
-
-  await pool.query(`DELETE FROM tasks WHERE pet_id = $1 AND category = $2`, [petId, category]);
+  const byName = new Map(deriveTasksForCategory(category, content).map((t) => [t.task_name, t]));
+  const tasks = [...byName.values()];
 
   for (const task of tasks) {
     await pool.query(
       `INSERT INTO tasks (pet_id, category, task_name, frequency_days, next_due)
-       VALUES ($1, $2, $3, $4, CURRENT_DATE + make_interval(days => $4))`,
+       VALUES ($1, $2, $3, $4, ${TODAY})
+       ON CONFLICT (pet_id, category, task_name) DO UPDATE
+       SET frequency_days = EXCLUDED.frequency_days,
+           next_due = COALESCE(tasks.last_done_on + EXCLUDED.frequency_days, tasks.next_due)`,
       [petId, category, task.task_name, task.frequency_days]
     );
   }
+  await pool.query(
+    `DELETE FROM tasks WHERE pet_id = $1 AND category = $2 AND NOT (task_name = ANY($3::text[]))`,
+    [petId, category, tasks.map((t) => t.task_name)]
+  );
 }
 
 export type Task = {
@@ -97,13 +124,34 @@ export type Task = {
   category: Category;
   task_name: string;
   frequency_days: number;
-  next_due: string;
+  next_due: string; // YYYY-MM-DD
+  last_done_on: string | null; // YYYY-MM-DD
+  due_in_days: number; // negative when overdue
 };
 
-export async function listTasksForPet(petId: string): Promise<Task[]> {
-  const { rows } = await pool.query<Task>(
-    `SELECT * FROM tasks WHERE pet_id = $1 ORDER BY frequency_days ASC, task_name ASC`,
+// Dates come back as YYYY-MM-DD text so the server's time zone can't shift them.
+export async function listTasksForPet(petId: string): Promise<{ tasks: Task[]; today: string }> {
+  const { rows } = await pool.query<Task & { today: string }>(
+    `SELECT id, pet_id, category, task_name, frequency_days,
+            next_due::text AS next_due, last_done_on::text AS last_done_on,
+            (next_due - ${TODAY}) AS due_in_days, ${TODAY}::text AS today
+     FROM tasks WHERE pet_id = $1
+     ORDER BY next_due ASC, frequency_days ASC, task_name ASC`,
     [petId]
   );
-  return rows;
+  const today = rows[0]?.today ?? (await pool.query<{ today: string }>(`SELECT ${TODAY}::text AS today`)).rows[0].today;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropping the per-row copy of today
+  return { tasks: rows.map(({ today: _today, ...task }) => task), today };
+}
+
+// Marks a task done today and schedules the next one. Scoped to the owner.
+export async function completeTaskForUser(taskId: string, userId: string): Promise<string | null> {
+  const { rows } = await pool.query<{ pet_id: string }>(
+    `UPDATE tasks t SET last_done_on = ${TODAY}, next_due = ${TODAY} + t.frequency_days
+     FROM pets p
+     WHERE t.id = $1 AND t.pet_id = p.id AND p.user_id = $2
+     RETURNING t.pet_id`,
+    [taskId, userId]
+  );
+  return rows[0]?.pet_id ?? null;
 }

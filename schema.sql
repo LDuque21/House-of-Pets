@@ -29,7 +29,10 @@ CREATE TABLE IF NOT EXISTS pets (
   -- Where the pet lives: a typed place and/or browser GPS coordinates.
   location_label TEXT,
   latitude DOUBLE PRECISION,
-  longitude DOUBLE PRECISION
+  longitude DOUBLE PRECISION,
+  -- Optional exact age, and known health conditions (free text, comma-separated).
+  age_years INTEGER CHECK (age_years BETWEEN 0 AND 100),
+  conditions TEXT
 );
 
 CREATE INDEX IF NOT EXISTS pets_user_id_idx ON pets(user_id);
@@ -51,8 +54,12 @@ CREATE TABLE IF NOT EXISTS tasks (
   category TEXT NOT NULL CHECK (category IN ('diet', 'hygiene', 'health', 'insurance', 'materials')),
   task_name TEXT NOT NULL,
   frequency_days INTEGER NOT NULL,
-  next_due DATE NOT NULL
+  next_due DATE NOT NULL,
+  last_done_on DATE -- set when the owner marks the task done
 );
+
+-- Regenerating a plan updates tasks in place, so completion history survives.
+CREATE UNIQUE INDEX IF NOT EXISTS tasks_pet_category_name_key ON tasks(pet_id, category, task_name);
 
 CREATE INDEX IF NOT EXISTS tasks_pet_id_idx ON tasks(pet_id);
 CREATE INDEX IF NOT EXISTS tasks_next_due_idx ON tasks(next_due);

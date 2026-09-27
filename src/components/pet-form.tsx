@@ -274,7 +274,44 @@ export function PetForm({ pet }: { pet?: Pet }) {
             </label>
           ))}
         </div>
+        <div className="mt-3 flex items-center gap-3">
+          <label htmlFor="age_years" className="text-sm text-muted-foreground">
+            Know the exact age?
+          </label>
+          <input
+            id="age_years"
+            name="age_years"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            defaultValue={pet?.age_years ?? ""}
+            placeholder="e.g. 8"
+            className={cn(inputClass, "w-24")}
+          />
+          <span className="text-sm text-muted-foreground">years</span>
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Optional. Helps us time age-based screenings, like checkups that start at a certain age.
+        </p>
       </fieldset>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="conditions" optional>
+          Health conditions
+        </Label>
+        <input
+          id="conditions"
+          name="conditions"
+          maxLength={300}
+          defaultValue={pet?.conditions ?? ""}
+          placeholder="e.g. diabetes, arthritis, chicken allergy"
+          className={inputClass}
+        />
+        <p className="text-xs text-muted-foreground">
+          Separate with commas. Every part of the care plan takes these into account.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="location_label" optional>
@@ -324,7 +361,7 @@ export function PetForm({ pet }: { pet?: Pet }) {
           name="notes"
           rows={3}
           defaultValue={pet?.notes ?? ""}
-          placeholder="Allergies, temperament, indoor or outdoor…"
+          placeholder="Temperament, indoor or outdoor, picky eater…"
           className={inputClass}
         />
       </div>

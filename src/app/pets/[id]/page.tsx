@@ -1,49 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarCheck, ChevronLeft, MapPin, Pencil } from "lucide-react";
+import { ChevronLeft, HeartPulse, MapPin, Pencil } from "lucide-react";
 import { auth } from "@/lib/auth/server";
 import { getPetForUser } from "@/lib/pets";
-import { listCareReportsForPet, listTasksForPet, type Task } from "@/lib/care-reports";
+import { listCareReportsForPet, listTasksForPet } from "@/lib/care-reports";
 import { CareReportCard } from "@/components/care-report-card";
+import { CareRoutine } from "@/components/care-routine";
 import { GenerateCarePlanForm } from "@/components/generate-care-plan-form";
 import { AnimalSilhouette, PetAvatar } from "@/components/animal-silhouettes";
-import { CATEGORY_META, CATEGORY_ORDER } from "@/components/category-meta";
+import { CATEGORY_ORDER } from "@/components/category-meta";
 import { buttonVariants } from "@/components/ui/button";
-import { frequencyLabel, petSummary } from "@/lib/format";
-
-// How often each routine happens -- deliberately no due dates.
-function CareRoutine({ tasks }: { tasks: Task[] }) {
-  return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-      <h2 className="flex items-center gap-2 text-xl font-semibold">
-        <CalendarCheck className="size-5 text-primary" />
-        Care routine
-      </h2>
-      {tasks.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          Feeding, grooming and checkup routines from the plan show up here.
-        </p>
-      ) : (
-        <ul className="mt-4 space-y-2">
-          {tasks.map((task) => {
-            const { Icon, tint } = CATEGORY_META[task.category];
-            return (
-              <li key={task.id} className="flex items-center gap-3 rounded-2xl bg-background px-3 py-2.5">
-                <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tint}`}>
-                  <Icon className="size-4" />
-                </span>
-                <p className="min-w-0 flex-1 truncate font-semibold">{task.task_name}</p>
-                <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
-                  {frequencyLabel(task.frequency_days)}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
+import { conditionList, petSummary } from "@/lib/format";
 
 export default async function PetPage({
   params,
@@ -57,7 +24,7 @@ export default async function PetPage({
   const pet = await getPetForUser(id, user.id);
   if (!pet) notFound();
 
-  const [reports, tasks] = await Promise.all([
+  const [reports, { tasks, today }] = await Promise.all([
     listCareReportsForPet(pet.id),
     listTasksForPet(pet.id),
   ]);
@@ -86,6 +53,19 @@ export default async function PetPage({
                 <MapPin className="size-4" />
                 {pet.location_label}
               </p>
+            )}
+            {conditionList(pet.conditions).length > 0 && (
+              <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Health conditions">
+                {conditionList(pet.conditions).map((condition) => (
+                  <li
+                    key={condition}
+                    className="inline-flex items-center gap-1 rounded-full bg-health-soft px-2.5 py-0.5 text-xs font-semibold text-health"
+                  >
+                    <HeartPulse className="size-3.5" />
+                    {condition}
+                  </li>
+                ))}
+              </ul>
             )}
             {pet.notes && <p className="mt-3 max-w-2xl text-sm">{pet.notes}</p>}
           </div>
@@ -121,8 +101,8 @@ export default async function PetPage({
               ))}
             </div>
           </section>
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <CareRoutine tasks={tasks} />
+          <aside className="lg:self-start">
+            <CareRoutine tasks={tasks} today={today} />
           </aside>
         </div>
       )}

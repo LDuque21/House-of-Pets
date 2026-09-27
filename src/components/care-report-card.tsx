@@ -5,7 +5,7 @@ import type { Pet, Species } from "@/lib/pets";
 import { INSURANCE_PROVIDERS, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
 import { ESSENTIALS, matchEssentials } from "@/lib/agents/essentials";
 import { CATEGORY_META } from "@/components/category-meta";
-import { frequencyLabel, nearbySearchUrl } from "@/lib/format";
+import { amazonSearchUrl, frequencyLabel, nearbySearchUrl } from "@/lib/format";
 
 function money(range: { low: number; high: number } | undefined) {
   if (!range) return null;
@@ -62,7 +62,52 @@ function Routine({ name, days, notes }: { name: string; days: number | undefined
   );
 }
 
-type MaterialItem = { name?: string; purpose?: string; price_range?: { low: number; high: number } };
+type Range = { low: number; high: number };
+type ProductOption = { product_name?: string; price_range?: Range; package?: string; note?: string };
+type Screening = { name?: string; frequency_days?: number; why?: string };
+type Milestone = { name?: string; starts?: string; why?: string };
+type ConditionCare = { condition?: string; what_to_do?: string; vet_followup_days?: number; red_flags?: string };
+
+function AmazonLink({ name }: { name: string }) {
+  return (
+    <a
+      href={amazonSearchUrl(name)}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      className="font-semibold text-primary underline-offset-4 hover:underline"
+    >
+      {name}
+      <ExternalLink className="ml-1 inline size-3.5 align-[-0.125em]" />
+    </a>
+  );
+}
+
+// Up to three products for one need, each linked to Amazon with a price range.
+function ProductOptions({ options, detailed = false }: { options: ProductOption[]; detailed?: boolean }) {
+  return (
+    <ul className="mt-1.5 space-y-2">
+      {options
+        .filter((o) => o.product_name)
+        .map((o, i) => (
+          <li key={i} className="text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <AmazonLink name={o.product_name!} />
+              <Price range={o.price_range} />
+            </div>
+            {detailed && (o.package || o.note) && (
+              <p className="mt-0.5 text-muted-foreground">{[o.package, o.note].filter(Boolean).join(" · ")}</p>
+            )}
+          </li>
+        ))}
+    </ul>
+  );
+}
+
+function AmazonFootnote() {
+  return <p className="mt-4 text-xs text-muted-foreground">Links open on Amazon. Prices are estimates.</p>;
+}
+
+type MaterialItem ={ name?: string; purpose?: string; price_range?: { low: number; high: number } };
 type Row = { name: string; purpose: string; price?: { low: number; high: number }; mustHave: boolean; shoppable: boolean };
 
 const STORE_SEARCH: Record<Species, string> = {
@@ -165,6 +210,23 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
 
   switch (report.category) {
     case "diet":
+      if (Array.isArray(c.food_options)) {
+        return (
+          <>
+            <Section title="Food picks">
+              <ProductOptions options={c.food_options} detailed />
+            </Section>
+            <p className="mt-4 text-sm">{c.feeding_instructions}</p>
+            {c.cautions?.length > 0 && (
+              <Section title="Cautions">
+                <List items={c.cautions} />
+              </Section>
+            )}
+            <AmazonFootnote />
+          </>
+        );
+      }
+      // Reports saved before product picks (one food + brand names).
       return (
         <>
           <div className="flex items-start justify-between gap-3">
@@ -199,6 +261,14 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
             />
             <Routine name="Cleanup" days={c.cleanup?.frequency_days} notes={c.cleanup?.notes} />
           </div>
+          {c.products?.length > 0 &&
+            c.products.map((group: { need?: string; options?: ProductOption[] }, i: number) => (
+              <Section key={i} title={group.need ?? "Products"}>
+                <ProductOptions options={group.options ?? []} />
+              </Section>
+            ))}
+          {c.products?.length > 0 && <AmazonFootnote />}
+          {/* Reports saved before product picks listed plain supply names. */}
           {c.supplies?.length > 0 && (
             <Section title="Supplies">
               <List items={c.supplies} />
@@ -213,6 +283,60 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
             <p className="font-semibold">Vet checkups</p>
             <Tag>{frequencyLabel(c.checkup_frequency_days)}</Tag>
           </div>
+          {c.condition_care?.length > 0 && (
+            <Section title="Managing known conditions">
+              <ul className="mt-1.5 space-y-3">
+                {c.condition_care.map((cc: ConditionCare, i: number) => (
+                  <li key={i} className="rounded-2xl bg-health-soft px-3 py-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold capitalize">{cc.condition}</p>
+                      {(cc.vet_followup_days ?? 0) > 0 && <Tag>Vet: {frequencyLabel(cc.vet_followup_days).toLowerCase()}</Tag>}
+                    </div>
+                    <p className="mt-1">{cc.what_to_do}</p>
+                    {cc.red_flags && (
+                      <p className="mt-1 text-muted-foreground">
+                        <span className="font-semibold text-foreground">Call the vet if: </span>
+                        {cc.red_flags}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">
+                General guidance only. Follow your vet&apos;s treatment plan.
+              </p>
+            </Section>
+          )}
+          {c.screenings?.length > 0 && (
+            <Section title="Screenings for this age">
+              <ul className="mt-1.5 space-y-2">
+                {c.screenings.map((s: Screening, i: number) => (
+                  <li key={i} className="text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold">{s.name}</p>
+                      <Tag>{frequencyLabel(s.frequency_days)}</Tag>
+                    </div>
+                    <p className="mt-0.5 text-muted-foreground">{s.why}</p>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+          {c.upcoming_milestones?.length > 0 && (
+            <Section title="Coming up with age">
+              <ul className="mt-1.5 space-y-2">
+                {c.upcoming_milestones.map((m: Milestone, i: number) => (
+                  <li key={i} className="text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold">{m.name}</p>
+                      <Tag>{m.starts}</Tag>
+                    </div>
+                    <p className="mt-0.5 text-muted-foreground">{m.why}</p>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
           {c.vaccinations?.length > 0 && (
             <Section title="Vaccinations">
               <List items={c.vaccinations} />
