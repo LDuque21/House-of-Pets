@@ -1,3 +1,5 @@
+/// Head AI agent. This one will dictate and receieve the information from the other agents called
+
 import type { Pet } from "@/lib/pets";
 import { generateStructuredJson } from "@/lib/gemini";
 import { schemaFor, type Category } from "@/lib/agents/schemas";

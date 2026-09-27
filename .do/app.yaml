@@ -1,0 +1,34 @@
+# DigitalOcean App Platform spec. Create the app from this file (Create App ->
+# import an app spec), then fill in the four secret values in the dashboard --
+# copy them from your local .env.local. Never commit real values here.
+name: house-of-pets
+# Neon runs in AWS us-east-2 (Ohio); New York is the closest App Platform region.
+region: nyc
+services:
+  - name: web
+    github:
+      repo: LDuque21/House-of-Pets
+      branch: main
+      deploy_on_push: true
+    environment_slug: node-js
+    build_command: npm run build
+    # `next start` listens on $PORT, which App Platform sets to http_port.
+    run_command: npm start
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /
+    envs:
+      - key: DATABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: NEON_AUTH_BASE_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: NEON_AUTH_COOKIE_SECRET
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: GEMINI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
