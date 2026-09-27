@@ -1,23 +1,19 @@
-"use client";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth/server";
+import { AuthScreen } from "./auth-screen";
 
-import { AuthView } from "@neondatabase/auth-ui";
-import { use } from "react";
-import { AnimalSilhouette } from "@/components/animal-silhouettes";
-
-export default function AuthPage({
+export default async function AuthPage({
   params,
 }: {
   params: Promise<{ path: string }>;
 }) {
-  const { path } = use(params);
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
-      <div aria-hidden className="flex items-end gap-1.5">
-        <AnimalSilhouette species="dog" className="size-14 text-dog" />
-        <AnimalSilhouette species="cat" className="size-12 text-cat" />
-        <AnimalSilhouette species="rabbit" className="size-12 text-rabbit" />
-      </div>
-      <AuthView path={path} />
-    </div>
-  );
+  const { path } = await params;
+  // Someone already signed in has nothing to do on these screens: send them to
+  // their pets. Also a safety net if the client-side redirect after signing in
+  // doesn't happen (seen on mobile).
+  if (path === "sign-in" || path === "sign-up") {
+    const { data: session } = await auth.getSession();
+    if (session?.user) redirect("/pets");
+  }
+  return <AuthScreen path={path} />;
 }

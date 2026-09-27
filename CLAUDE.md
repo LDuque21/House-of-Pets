@@ -141,4 +141,4 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 
 ## Account privacy
 
-Every page and action scopes data to the signed-in user (`getPetForUser` / `user_id` joins); checked Sep 27. What can carry between accounts on a shared device is the browser, not the server: pet inputs and the Adjust box set `autoComplete="off"` (no form-history suggestions), and `onSessionChange` in `providers.tsx` calls `router.refresh()` so cached pages from the previous account are dropped on sign-in/out.
+Every page and action scopes data to the signed-in user (`getPetForUser` / `user_id` joins); checked Sep 27. What can carry between accounts on a shared device is the browser, not the server: pet inputs and the Adjust box set `autoComplete="off"` (no form-history suggestions), and signing in/out uses the auth library's default full-page navigation, which drops cached pages from the previous account. (A `router.refresh()` in `onSessionChange` was tried and removed: it raced the post-sign-in redirect on mobile.) `/auth/sign-in` and `/auth/sign-up` redirect already-signed-in users to `/pets` server-side.
