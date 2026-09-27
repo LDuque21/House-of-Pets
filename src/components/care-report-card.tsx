@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ExternalLink, MapPin, SlidersHorizontal } from "lucide-react";
+import { ExternalLink, MapPin, Plus, SlidersHorizontal } from "lucide-react";
+import type { Category } from "@/lib/agents/schemas";
 import type { CareReport } from "@/lib/care-reports";
 import type { Pet, Species } from "@/lib/pets";
 import { INSURANCE_PROVIDERS, providersFor, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
@@ -98,7 +99,6 @@ function HygieneBody({ c }: { c: Record<string, unknown> }) {
     ["Dental care", c.dental_care as HygieneRoutine | undefined],
     ["Cleanup", c.cleanup as HygieneRoutine | undefined],
   ];
-  const nested = routines.some(([, r]) => r?.products?.length);
   // Older reports: one product list for the whole card, or plain supply names.
   const flatProducts = (c.products ?? []) as ProductGroup[];
   const supplies = (c.supplies ?? []) as string[];
@@ -132,7 +132,6 @@ function HygieneBody({ c }: { c: Record<string, unknown> }) {
           <List items={supplies} />
         </Section>
       )}
-      {(nested || flatProducts.length > 0) && <AmazonFootnote />}
     </>
   );
 }
@@ -301,7 +300,6 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
                 <List items={c.cautions} />
               </Section>
             )}
-            <AmazonFootnote />
           </>
         );
       }
@@ -465,7 +463,45 @@ export function CareReportCard({ report, pet }: { report: CareReport; pet: Pet }
       )}
       <div className="mt-4 flex-1">
         <CategoryBody report={report} pet={pet} />
+        <Extras category={report.category} extras={report.content.extras} />
+        {hasAmazonLinks(report.content) && <AmazonFootnote />}
       </div>
     </article>
+  );
+}
+
+// What the owner added through Adjust (treats, a supplement, a health
+// question), shown after the main recommendations, which stay as they were.
+function Extras({ category, extras }: { category: Category; extras: unknown }) {
+  if (!Array.isArray(extras) || extras.length === 0) return null;
+  return (
+    <div className="mt-5 border-t border-dashed border-border pt-1">
+      <p className="mt-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+        <Plus className="size-3.5" />
+        Added at your request
+      </p>
+      {category === "health"
+        ? (extras as { topic?: string; advice?: string }[]).map((e, i) => (
+            <div key={i} className="mt-2 text-sm">
+              <p className="font-semibold">{e.topic}</p>
+              <p className="mt-0.5 text-muted-foreground">{e.advice}</p>
+            </div>
+          ))
+        : (extras as ProductGroup[]).map((group, i) => (
+            <Section key={i} title={group.need ?? "Extras"}>
+              <ProductOptions options={group.options ?? []} />
+            </Section>
+          ))}
+    </div>
+  );
+}
+
+function hasAmazonLinks(c: Record<string, unknown>): boolean {
+  const routines = [c.bathing, c.dental_care, c.cleanup] as ({ products?: unknown[] } | undefined)[];
+  return (
+    Array.isArray(c.food_options) ||
+    (Array.isArray(c.products) && c.products.length > 0) ||
+    routines.some((r) => (r?.products?.length ?? 0) > 0) ||
+    (c.category !== "health" && Array.isArray(c.extras) && c.extras.length > 0)
   );
 }

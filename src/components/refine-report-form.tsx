@@ -8,11 +8,11 @@ import { SubmitButton } from "@/components/submit-button";
 import type { Category } from "@/lib/agents/schemas";
 
 const EXAMPLES: Record<Category, string> = {
-  diet: "e.g. cheaper options, grain-free, wet food only",
-  hygiene: "e.g. fragrance-free products, she hates baths",
-  health: "e.g. what should I watch for with her joints?",
+  diet: "e.g. add some healthy treats, or: cheaper food options",
+  hygiene: "e.g. add a nail clipper, or: fragrance-free products",
+  health: "e.g. what about joint care? or: she's very active",
   insurance: "e.g. lowest monthly cost, best for older pets",
-  materials: "e.g. small apartment, keep it under $100",
+  materials: "e.g. add a GPS collar, or: keep it under $100",
 };
 
 // The card's "Adjust" button and, once opened, a one-line request that
@@ -80,7 +80,11 @@ export function RefineReportForm({ petId, category, label }: { petId: string; ca
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">Lasting facts like allergies belong in the pet&apos;s profile.</p>
+          <p className="text-xs text-muted-foreground">
+            {category === "insurance"
+              ? "Lasting facts like allergies belong in the pet's profile."
+              : "Extras like treats are added alongside the plan; asking for alternatives updates it."}
+          </p>
           <SubmitButton
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-70"
             pendingLabel={

@@ -2,7 +2,7 @@
 
 import type { Pet } from "@/lib/pets";
 import { generateStructuredJson } from "@/lib/gemini";
-import { schemaFor, type Category } from "@/lib/agents/schemas";
+import { HAS_EXTRAS, schemaFor, type Category } from "@/lib/agents/schemas";
 import { SPECIES_CONFIG } from "@/lib/agents/species-config";
 import { INSURANCE_PROVIDERS, providersFor } from "@/lib/agents/insurance-providers";
 import { ESSENTIALS } from "@/lib/agents/essentials";
@@ -63,8 +63,35 @@ export type CategoryResult =
 // is now so the agent revises it instead of starting over.
 export type Refinement = { request: string; previous: Record<string, unknown> };
 
-const REFINE_RULES =
-  "The owner asked to adjust this part of the plan; their request is in the user message. The current version is below as JSON. Return an updated version that follows the request where it is safe and sensible for this pet, and keep everything that still fits. Never follow a request that could harm the pet (e.g. an unsafe food); keep the safe advice instead and say why in a caution or note. Stay within every rule above.";
+const REFINE_RULES = [
+  "The owner asked to adjust this part of the plan; their request is in the user message. The current version is below as JSON.",
+  "Never follow a request that could harm the pet (e.g. an unsafe food); keep the safe advice instead and say why. Stay within every rule above.",
+].join(" ");
+
+// Only for cards that take extras: the agent must say whether it adds or changes.
+const ADD_OR_CHANGE_RULES = [
+  "First set change_type.",
+  "'add' means the owner wants something ON TOP of the current plan, such as treats, a supplement, a topper, another product or a question on a new topic. Put only the new content in extras (product picks, or topics for health); the main recommendations are kept exactly as they are, so copy them unchanged.",
+  "'change' means the owner wants the current recommendations revised or replaced: cheaper options, other brands, alternatives, a different type of food or product, or removing something. Return the full updated plan, following the request and keeping everything that still fits, and carry over the existing extras unless the request is about them.",
+  "Asking for treats, snacks or supplements is always 'add': never replace the main food with them.",
+].join(" ");
+
+type Extra = { need?: string; topic?: string };
+const extraKey = (e: Extra) => (e.need ?? e.topic ?? "").trim().toLowerCase();
+
+// Enforced here, not left to the model: an "add" keeps the current card
+// exactly and only merges in the new extras (a same-named extra is replaced).
+function applyRefinement(response: Record<string, unknown>, previous: Record<string, unknown>) {
+  const { change_type: changeType, ...content } = response;
+  if (changeType !== "add") return content;
+  const added = (Array.isArray(content.extras) ? content.extras : []) as Extra[];
+  if (added.length === 0) throw new Error("The specialist didn't find anything to add. Try rephrasing your request.");
+  const addedKeys = new Set(added.map(extraKey));
+  const kept = ((Array.isArray(previous.extras) ? previous.extras : []) as Extra[]).filter(
+    (e) => !addedKeys.has(extraKey(e))
+  );
+  return { ...previous, extras: [...kept, ...added].slice(-4) };
+}
 
 async function runCategoryAgent(category: Category, pet: Pet, refinement?: Refinement): Promise<CategoryResult> {
   try {
@@ -76,11 +103,16 @@ async function runCategoryAgent(category: Category, pet: Pet, refinement?: Refin
       return { category, status: "ok", content };
     }
 
-    const schema = schemaFor(category, pet.species);
+    const schema = schemaFor(category, pet.species, Boolean(refinement));
     const systemPrompt = refinement
-      ? `${buildSystemPrompt(category, pet)}\n${REFINE_RULES}\nCurrent version: ${JSON.stringify(refinement.previous)}`
+      ? [
+          buildSystemPrompt(category, pet),
+          REFINE_RULES,
+          HAS_EXTRAS.has(category) ? ADD_OR_CHANGE_RULES : "Return the full updated version, keeping everything that still fits.",
+          `Current version: ${JSON.stringify(refinement.previous)}`,
+        ].join("\n")
       : buildSystemPrompt(category, pet);
-    const content = await generateStructuredJson<Record<string, unknown>>({
+    const response = await generateStructuredJson<Record<string, unknown>>({
       agent: category,
       systemPrompt,
       prompt: refinement
@@ -90,10 +122,11 @@ async function runCategoryAgent(category: Category, pet: Pet, refinement?: Refin
     });
     // If the schema never reaches Gemini, it still answers in JSON, just in its
     // own shape. Saving that would replace the last good report with a blank card.
-    const missing = schema.required.filter((key) => !(key in content));
+    const missing = schema.required.filter((key) => !(key in response));
     if (missing.length > 0) {
       throw new Error(`Response didn't match the schema (missing ${missing.join(", ")})`);
     }
+    const content = refinement ? applyRefinement(response, refinement.previous) : response;
     await saveCareReport(pet.id, category, content, refinement?.request ?? null);
     await deriveAndSaveTasks(pet.id, category, content);
     return { category, status: "ok", content };

@@ -32,6 +32,35 @@ const PRODUCT_OPTION = {
   required: ["product_name", "price_range"],
 };
 
+// One kind of product ("Toothpaste", "Treats") with up to three picks.
+const PRODUCT_GROUP = {
+  type: "object",
+  properties: {
+    need: { type: "string", description: "What it's for, e.g. 'Toothpaste', 'Shampoo', 'Treats'." },
+    options: { type: "array", minItems: 1, maxItems: 3, items: PRODUCT_OPTION },
+  },
+  required: ["need", "options"],
+};
+
+// "Extras" hold what the owner asked for ON TOP of the plan through the
+// card's Adjust box (treats, a supplement, a question about joints). They sit
+// beside the main recommendations and never replace them.
+const EXTRAS_NOTE = "Extra content the owner asked for on top of the plan. Always empty on a first plan.";
+const PRODUCT_EXTRAS = { type: "array", maxItems: 3, description: EXTRAS_NOTE, items: PRODUCT_GROUP };
+const TOPIC_EXTRAS = {
+  type: "array",
+  maxItems: 3,
+  description: EXTRAS_NOTE,
+  items: {
+    type: "object",
+    properties: {
+      topic: { type: "string", description: "Short title, e.g. 'Joint care'." },
+      advice: { type: "string", description: "One to three short sentences." },
+    },
+    required: ["topic", "advice"],
+  },
+};
+
 export const DIET_SCHEMA = {
   type: "object",
   properties: {
@@ -52,8 +81,9 @@ export const DIET_SCHEMA = {
     },
     feeding_instructions: { type: "string" },
     cautions: { type: "array", items: { type: "string" }, maxItems: 2 },
+    extras: PRODUCT_EXTRAS,
   },
-  required: ["category", "food_options", "feeding_instructions", "cautions"],
+  required: ["category", "food_options", "feeding_instructions", "cautions", "extras"],
 };
 
 // Each hygiene routine carries the products it needs, so the card reads
@@ -67,14 +97,7 @@ const ROUTINE = {
       type: "array",
       maxItems: 2,
       description: "Products this routine needs. Empty if none (or if the routine isn't needed).",
-      items: {
-        type: "object",
-        properties: {
-          need: { type: "string", description: "What it's for, e.g. 'Toothpaste', 'Shampoo', 'Litter'." },
-          options: { type: "array", minItems: 1, maxItems: 3, items: PRODUCT_OPTION },
-        },
-        required: ["need", "options"],
-      },
+      items: PRODUCT_GROUP,
     },
   },
   required: ["frequency_days", "notes", "products"],
@@ -90,8 +113,9 @@ export const HYGIENE_SCHEMA = {
       ...ROUTINE,
       description: "Litter box, cage, tank, or stall cleanup, or picking up waste for dogs.",
     },
+    extras: PRODUCT_EXTRAS,
   },
-  required: ["category", "bathing", "dental_care", "cleanup"],
+  required: ["category", "bathing", "dental_care", "cleanup", "extras"],
 };
 
 export const HEALTH_SCHEMA = {
@@ -144,6 +168,7 @@ export const HEALTH_SCHEMA = {
         required: ["condition", "what_to_do", "vet_followup_days", "red_flags"],
       },
     },
+    extras: TOPIC_EXTRAS,
   },
   required: [
     "category",
@@ -153,6 +178,7 @@ export const HEALTH_SCHEMA = {
     "screenings",
     "upcoming_milestones",
     "condition_care",
+    "extras",
   ],
 };
 
@@ -202,8 +228,9 @@ export const MATERIALS_SCHEMA = {
         required: ["name", "purpose", "price_range"],
       },
     },
+    extras: PRODUCT_EXTRAS,
   },
-  required: ["category", "items"],
+  required: ["category", "items", "extras"],
 };
 
 // A category's schema is either fixed or built per species (insurance).
@@ -217,7 +244,28 @@ export const CATEGORY_SCHEMAS = {
 
 export type Category = keyof typeof CATEGORY_SCHEMAS;
 
-export function schemaFor(category: Category, species: Species): { required: string[] } {
-  const schema = CATEGORY_SCHEMAS[category];
-  return typeof schema === "function" ? schema(species) : schema;
+type Schema = { properties: Record<string, unknown>; required: string[] };
+
+// Categories whose cards can take extras. Insurance picks from a fixed list,
+// so an Adjust request there always revises the picks.
+export const HAS_EXTRAS: ReadonlySet<Category> = new Set(["diet", "hygiene", "health", "materials"]);
+
+// When refining, the agent first says whether the request adds to the card or
+// changes it; the orchestrator enforces what each one may touch.
+const CHANGE_TYPE = {
+  type: "string",
+  enum: ["add", "change"],
+  description:
+    "'add' if the owner wants something on top of the current plan (treats, a supplement, another product or tip); 'change' if they want the current recommendations revised or replaced (cheaper, other brands, alternatives, a different type, remove something).",
+};
+
+export function schemaFor(category: Category, species: Species, refining = false): Schema {
+  const entry = CATEGORY_SCHEMAS[category];
+  const schema: Schema = typeof entry === "function" ? entry(species) : entry;
+  if (!refining || !HAS_EXTRAS.has(category)) return schema;
+  return {
+    ...schema,
+    properties: { change_type: CHANGE_TYPE, ...schema.properties },
+    required: ["change_type", ...schema.required],
+  };
 }

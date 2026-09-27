@@ -102,7 +102,7 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 
 ## Explicit scope decisions (don't relitigate without asking)
 
-- **No persistent chatbot** — hard Microsoft-challenge requirement (the core is a dashboard). The per-card "Adjust" box is the only sanctioned free-text LLM surface (built Sep 27: `refine-report-form.tsx` → `refineCareReportAction` → `refineCategory`; one-shot, the previous card JSON goes in the system prompt, the request in the user message, saved to `care_reports.request` and shown on the card).
+- **No persistent chatbot** — hard Microsoft-challenge requirement (the core is a dashboard). The per-card "Adjust" box is the only sanctioned free-text LLM surface (built Sep 27: `refine-report-form.tsx` → `refineCareReportAction` → `refineCategory`; one-shot, the previous card JSON goes in the system prompt, the request in the user message, saved to `care_reports.request` and shown on the card). Refining diet/hygiene/health/materials adds a `change_type` field: "add" (treats, supplements, a new topic) keeps the previous card byte-for-byte and merges only `extras` (enforced in `applyRefinement`, not trusted to the model; user requirement: treats must never replace the main food); "change" (cheaper, alternatives, other type) replaces the card. `extras` render under "Added at your request". Full regenerate starts fresh (extras are dropped).
 - **Orchestrator stays plain code**, not an LLM router.
 - **Categories locked to the five.** Species are the twelve above (the user expanded from dog/cat/rabbit, then added rodents and raccoon as separate tiles). Raccoons: pet page shows a legality notice; no insurer covers them (Nationwide excludes permit-required species).
 - **Email + password auth only.**
