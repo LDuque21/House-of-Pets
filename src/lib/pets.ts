@@ -1,7 +1,9 @@
 import { pool } from "@/lib/db";
 
 // Must match the pets.species CHECK constraint in schema.sql.
-export const SPECIES = ["dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster"] as const;
+export const SPECIES = [
+  "dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster", "guinea_pig", "rat", "chinchilla", "raccoon",
+] as const;
 export type Species = (typeof SPECIES)[number];
 export const AGE_STAGES = ["baby", "adult", "senior"] as const;
 export type AgeStage = (typeof AGE_STAGES)[number];

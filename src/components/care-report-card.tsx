@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ExternalLink, MapPin } from "lucide-react";
+import { ExternalLink, MapPin, SlidersHorizontal } from "lucide-react";
 import type { CareReport } from "@/lib/care-reports";
 import type { Pet, Species } from "@/lib/pets";
-import { INSURANCE_PROVIDERS, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
+import { INSURANCE_PROVIDERS, providersFor, type InsuranceProviderKey } from "@/lib/agents/insurance-providers";
+import { RefineReportForm } from "@/components/refine-report-form";
 import { ESSENTIALS, matchEssentials } from "@/lib/agents/essentials";
 import { CATEGORY_META } from "@/components/category-meta";
 import { amazonSearchUrl, frequencyLabel, nearbySearchUrl } from "@/lib/format";
@@ -50,7 +51,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Routine({ name, days, notes }: { name: string; days: number | undefined; notes: React.ReactNode }) {
+function Routine({
+  name,
+  days,
+  notes,
+  children,
+}: {
+  name: string;
+  days: number | undefined;
+  notes: React.ReactNode;
+  children?: React.ReactNode;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
@@ -58,7 +69,71 @@ function Routine({ name, days, notes }: { name: string; days: number | undefined
         <Tag>{frequencyLabel(days)}</Tag>
       </div>
       <p className="mt-0.5 text-sm text-muted-foreground">{notes}</p>
+      {children}
     </div>
+  );
+}
+
+type ProductGroup = { need?: string; options?: ProductOption[] };
+type HygieneRoutine = { frequency_days?: number; notes?: string; products?: ProductGroup[] };
+
+// "Toothpaste: we recommend these", nested under the routine that uses it.
+function RoutineProducts({ groups }: { groups: ProductGroup[] | undefined }) {
+  if (!groups?.length) return null;
+  return (
+    <div className="mt-2 space-y-2.5 border-l-2 border-hygiene-soft pl-3">
+      {groups.map((group, i) => (
+        <div key={i}>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{group.need}</p>
+          <ProductOptions options={group.options ?? []} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HygieneBody({ c }: { c: Record<string, unknown> }) {
+  const routines: [string, HygieneRoutine | undefined][] = [
+    ["Bathing", c.bathing as HygieneRoutine | undefined],
+    ["Dental care", c.dental_care as HygieneRoutine | undefined],
+    ["Cleanup", c.cleanup as HygieneRoutine | undefined],
+  ];
+  const nested = routines.some(([, r]) => r?.products?.length);
+  // Older reports: one product list for the whole card, or plain supply names.
+  const flatProducts = (c.products ?? []) as ProductGroup[];
+  const supplies = (c.supplies ?? []) as string[];
+  const dentalTreats = (c.dental_care as { dental_treats?: string[] } | undefined)?.dental_treats;
+  return (
+    <>
+      <div className="space-y-4">
+        {routines.map(([name, routine]) => (
+          <Routine
+            key={name}
+            name={name}
+            days={routine?.frequency_days}
+            notes={
+              <>
+                {routine?.notes}
+                {name === "Dental care" && dentalTreats?.length ? ` (${dentalTreats.join(", ")})` : ""}
+              </>
+            }
+          >
+            <RoutineProducts groups={routine?.products} />
+          </Routine>
+        ))}
+      </div>
+      {flatProducts.map((group, i) => (
+        <Section key={i} title={group.need ?? "Products"}>
+          <ProductOptions options={group.options ?? []} />
+        </Section>
+      ))}
+      {supplies.length > 0 && (
+        <Section title="Supplies">
+          <List items={supplies} />
+        </Section>
+      )}
+      {(nested || flatProducts.length > 0) && <AmazonFootnote />}
+    </>
   );
 }
 
@@ -90,13 +165,13 @@ function ProductOptions({ options, detailed = false }: { options: ProductOption[
         .filter((o) => o.product_name)
         .map((o, i) => (
           <li key={i} className="text-sm">
-            <div className="flex items-start justify-between gap-3">
-              <AmazonLink name={o.product_name!} />
+            <AmazonLink name={o.product_name!} />
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
               <Price range={o.price_range} />
+              {detailed && (o.package || o.note) && (
+                <span className="text-muted-foreground">{[o.package, o.note].filter(Boolean).join(" · ")}</span>
+              )}
             </div>
-            {detailed && (o.package || o.note) && (
-              <p className="mt-0.5 text-muted-foreground">{[o.package, o.note].filter(Boolean).join(" · ")}</p>
-            )}
           </li>
         ))}
     </ul>
@@ -119,6 +194,10 @@ const STORE_SEARCH: Record<Species, string> = {
   bird: "bird supply store",
   reptile: "reptile supply store",
   horse: "tack and feed store",
+  guinea_pig: "pet store",
+  rat: "pet store",
+  chinchilla: "pet store",
+  raccoon: "exotic pet supply store",
 };
 
 // The species' must-haves always appear (even if the agent left one out),
@@ -245,37 +324,7 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
         </>
       );
     case "hygiene":
-      return (
-        <>
-          <div className="space-y-3">
-            <Routine name="Bathing" days={c.bathing?.frequency_days} notes={c.bathing?.notes} />
-            <Routine
-              name="Dental care"
-              days={c.dental_care?.frequency_days}
-              notes={
-                <>
-                  {c.dental_care?.notes}
-                  {c.dental_care?.dental_treats?.length ? ` (${c.dental_care.dental_treats.join(", ")})` : ""}
-                </>
-              }
-            />
-            <Routine name="Cleanup" days={c.cleanup?.frequency_days} notes={c.cleanup?.notes} />
-          </div>
-          {c.products?.length > 0 &&
-            c.products.map((group: { need?: string; options?: ProductOption[] }, i: number) => (
-              <Section key={i} title={group.need ?? "Products"}>
-                <ProductOptions options={group.options ?? []} />
-              </Section>
-            ))}
-          {c.products?.length > 0 && <AmazonFootnote />}
-          {/* Reports saved before product picks listed plain supply names. */}
-          {c.supplies?.length > 0 && (
-            <Section title="Supplies">
-              <List items={c.supplies} />
-            </Section>
-          )}
-        </>
-      );
+      return <HygieneBody c={c} />;
     case "health":
       return (
         <>
@@ -395,14 +444,25 @@ function CategoryBody({ report, pet }: { report: CareReport; pet: Pet }) {
 
 export function CareReportCard({ report, pet }: { report: CareReport; pet: Pet }) {
   const meta = CATEGORY_META[report.category];
+  // Nothing to adjust when no insurer covers the species.
+  const adjustable = !(report.category === "insurance" && providersFor(pet.species).length === 0);
   return (
     <article className="flex flex-col rounded-3xl border border-border bg-card p-5 shadow-sm">
-      <header className="flex items-center gap-3">
+      <header className="flex flex-wrap items-center gap-3">
         <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${meta?.tint ?? "bg-muted"}`}>
           {meta && <meta.Icon className="size-5" />}
         </span>
-        <h3 className="text-lg font-semibold">{meta?.label ?? report.category}</h3>
+        <h3 className="min-w-0 flex-1 text-lg font-semibold">{meta?.label ?? report.category}</h3>
+        {adjustable && <RefineReportForm petId={pet.id} category={report.category} label={meta.label} />}
       </header>
+      {report.request && (
+        <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
+          <SlidersHorizontal className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            Adjusted for: <span className="italic">&ldquo;{report.request}&rdquo;</span>
+          </span>
+        </p>
+      )}
       <div className="mt-4 flex-1">
         <CategoryBody report={report} pet={pet} />
       </div>

@@ -12,7 +12,9 @@ import type { AgeStage, Confidence, Pet, Species } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
 // Kept local (not imported from lib/pets, which pulls in the database pool).
-const SPECIES_ORDER: Species[] = ["dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster"];
+const SPECIES_ORDER: Species[] = [
+  "dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster", "guinea_pig", "rat", "chinchilla", "raccoon",
+];
 const AGE_OPTIONS: { value: AgeStage; label: string; hint: string }[] = [
   { value: "baby", label: "Baby", hint: "Still little" },
   { value: "adult", label: "Adult", hint: "All grown up" },
@@ -232,7 +234,9 @@ export function PetForm({ pet }: { pet?: Pet }) {
               />
               <span className={cn(tileClass, "flex flex-col items-center gap-1.5 px-1 py-3")}>
                 <AnimalSilhouette species={option} className={cn("w-11 sm:w-12", SPECIES_TINTS[option].text)} />
-                <span className="font-heading text-sm font-semibold">{SPECIES_LABELS[option]}</span>
+                <span className="text-center font-heading text-sm font-semibold leading-tight">
+                  {SPECIES_LABELS[option]}
+                </span>
               </span>
             </label>
           ))}

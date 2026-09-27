@@ -68,6 +68,14 @@
   --color-reptile-soft: var(--reptile-soft);
   --color-hamster: var(--hamster);
   --color-hamster-soft: var(--hamster-soft);
+  --color-guinea-pig: var(--guinea-pig);
+  --color-guinea-pig-soft: var(--guinea-pig-soft);
+  --color-rat: var(--rat);
+  --color-rat-soft: var(--rat-soft);
+  --color-chinchilla: var(--chinchilla);
+  --color-chinchilla-soft: var(--chinchilla-soft);
+  --color-raccoon: var(--raccoon);
+  --color-raccoon-soft: var(--raccoon-soft);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -139,6 +147,14 @@
   --reptile-soft: oklch(0.93 0.05 150);
   --hamster: oklch(0.5 0.09 65);
   --hamster-soft: oklch(0.93 0.05 70);
+  --guinea-pig: oklch(0.48 0.1 45);
+  --guinea-pig-soft: oklch(0.92 0.05 45);
+  --rat: oklch(0.45 0.04 250);
+  --rat-soft: oklch(0.93 0.02 250);
+  --chinchilla: oklch(0.47 0.07 200);
+  --chinchilla-soft: oklch(0.93 0.035 200);
+  --raccoon: oklch(0.42 0.03 60);
+  --raccoon-soft: oklch(0.92 0.02 60);
 }
 
 /* Warm cocoa + apricot. */
@@ -202,6 +218,14 @@
   --reptile-soft: oklch(0.32 0.05 150);
   --hamster: oklch(0.87 0.07 70);
   --hamster-soft: oklch(0.33 0.05 70);
+  --guinea-pig: oklch(0.86 0.07 45);
+  --guinea-pig-soft: oklch(0.33 0.05 45);
+  --rat: oklch(0.86 0.03 250);
+  --rat-soft: oklch(0.32 0.02 250);
+  --chinchilla: oklch(0.86 0.06 200);
+  --chinchilla-soft: oklch(0.32 0.04 200);
+  --raccoon: oklch(0.85 0.025 60);
+  --raccoon-soft: oklch(0.32 0.02 60);
 }
 
 @layer base {

@@ -56,10 +56,28 @@ export const DIET_SCHEMA = {
   required: ["category", "food_options", "feeding_instructions", "cautions"],
 };
 
+// Each hygiene routine carries the products it needs, so the card reads
+// "Dental care: brush weekly -> Toothbrush: these 3 -> Toothpaste: these 3".
 const ROUTINE = {
   type: "object",
-  properties: { frequency_days: FREQUENCY_DAYS, notes: { type: "string" } },
-  required: ["frequency_days", "notes"],
+  properties: {
+    frequency_days: FREQUENCY_DAYS,
+    notes: { type: "string" },
+    products: {
+      type: "array",
+      maxItems: 2,
+      description: "Products this routine needs. Empty if none (or if the routine isn't needed).",
+      items: {
+        type: "object",
+        properties: {
+          need: { type: "string", description: "What it's for, e.g. 'Toothpaste', 'Shampoo', 'Litter'." },
+          options: { type: "array", minItems: 1, maxItems: 3, items: PRODUCT_OPTION },
+        },
+        required: ["need", "options"],
+      },
+    },
+  },
+  required: ["frequency_days", "notes", "products"],
 };
 
 export const HYGIENE_SCHEMA = {
@@ -72,21 +90,8 @@ export const HYGIENE_SCHEMA = {
       ...ROUTINE,
       description: "Litter box, cage, tank, or stall cleanup, or picking up waste for dogs.",
     },
-    products: {
-      type: "array",
-      minItems: 1,
-      maxItems: 4,
-      items: {
-        type: "object",
-        properties: {
-          need: { type: "string", description: "What it's for, e.g. 'Toothpaste', 'Shampoo', 'Litter'." },
-          options: { type: "array", minItems: 1, maxItems: 3, items: PRODUCT_OPTION },
-        },
-        required: ["need", "options"],
-      },
-    },
   },
-  required: ["category", "bathing", "dental_care", "cleanup", "products"],
+  required: ["category", "bathing", "dental_care", "cleanup"],
 };
 
 export const HEALTH_SCHEMA = {

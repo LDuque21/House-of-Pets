@@ -82,7 +82,7 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6">
         <h2 className="text-center text-2xl font-semibold">Made for every kind of pet</h2>
-        <ul className="mt-8 grid grid-cols-4 gap-x-4 gap-y-6 sm:grid-cols-8">
+        <ul className="mt-8 grid grid-cols-4 gap-x-4 gap-y-6 sm:grid-cols-6">
           {SPECIES.map((species) => (
             <li key={species} className="flex flex-col items-center gap-2">
               <AnimalSilhouette species={species} className={`w-14 sm:w-16 ${SPECIES_TINTS[species].text}`} />

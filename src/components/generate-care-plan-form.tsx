@@ -9,7 +9,7 @@ import type { Category } from "@/lib/agents/schemas";
 
 // Plain-language reasons for the Gemini failures we've actually hit; the raw
 // error stays available under "Details".
-function friendlyReason(error: string): string {
+export function friendlyReason(error: string): string {
   if (/\b401\b|UNAUTHENTICATED/.test(error)) return "Gemini didn't accept the API key.";
   if (/\b429\b|RESOURCE_EXHAUSTED/.test(error)) return "Gemini's rate limit was reached. Try again in a minute.";
   if (/\b503\b|UNAVAILABLE|overloaded/i.test(error)) return "Gemini is busy right now. Try again shortly.";

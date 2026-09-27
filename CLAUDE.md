@@ -8,7 +8,7 @@ Original spec: [docs/spec.md](docs/spec.md) (has an "Amendments" section on the 
 
 ## What this is
 
-A pet-care dashboard. A user signs up, adds a pet — by uploading a photo (a Gemini vision agent fills in species/breed/age to confirm) or by typing the details — then generates an AI care plan across five categories (Diet, Hygiene, Health, Insurance, Materials), each shown as a card, plus a "Care routine" of recurring tasks with frequencies. Eight species: dog, cat, rabbit, fish, bird, horse, reptile, hamster. Pets can have photos, a home location (for "find nearby" store links), and can be edited or removed. Users can set a profile photo. The site is installable on phones as a web app (PWA).
+A pet-care dashboard. A user signs up, adds a pet — by uploading a photo (a Gemini vision agent fills in species/breed/age to confirm) or by typing the details — then generates an AI care plan across five categories (Diet, Hygiene, Health, Insurance, Materials), each shown as a card (side by side on wide screens, each with an "Adjust" box that re-runs just that agent on the owner's request), plus a "Care routine" screen of recurring tasks with due dates and a calendar. Twelve species: dog, cat, rabbit, fish, bird, horse, reptile, hamster, guinea_pig, rat, chinchilla, raccoon. Pets can have photos, a home location (for "find nearby" store links), and can be edited or removed. Users can set a profile photo. The site is installable on phones as a web app (PWA).
 
 ## Stack
 
@@ -32,7 +32,8 @@ src/app/
   api/auth/[...path]/route.ts  Neon Auth handler
   pets/page.tsx                the user's pets (cards with photo or silhouette avatar)
   pets/new/page.tsx            add a pet (PetForm)
-  pets/[id]/page.tsx           pet dashboard: header card (photo, summary, location, Edit), generate button, plan cards, Care routine
+  pets/[id]/page.tsx           pet dashboard: header card (photo, summary, conditions, location, Edit), generate button, routine banner, 5 plan cards (xl: one row)
+  pets/[id]/routine/page.tsx   care routine screen: RoutineList (left) + RoutineCalendar (right)
   pets/[id]/edit/page.tsx      edit pet (PetForm) + remove pet
   pets/actions.ts              server actions: identifyPetAction, createPetAction, updatePetAction, deletePetAction, generateCarePlanAction
 
@@ -46,7 +47,7 @@ src/lib/
     orchestrator.ts            buildCareHub(pet): Promise.all over 5 category agents — plain code, NOT an LLM router
     vision.ts                  identifyPet(photo): species/breed/age/confidence; unsupported-species message
     schemas.ts                 JSON Schemas; insuranceSchema(species) built per pet; schemaFor()
-    species-config.ts          per-species prompt context for all 8 species
+    species-config.ts          per-species prompt context for all 12 species
     insurance-providers.ts     hardcoded real insurers + URLs + which species each covers
     essentials.ts              per-species must-have supplies + matchEssentials()
 
@@ -67,24 +68,24 @@ schema.sql                         current schema (CREATE TABLE IF NOT EXISTS �
 ## Agent system
 
 - **Five category agents** (Diet, Hygiene, Health, Insurance, Materials): one Gemini call each, own system prompt + JSON schema, run in parallel. Each saves its own report; one failing doesn't block the others, and the UI says which failed and why (raw error under "Details"). Before saving, the orchestrator checks the response has the schema's required top-level keys — otherwise a malformed answer would replace the last good report with a blank card.
-- **Output is deliberately concise** (user feedback: scannable in seconds). Diet: up to 3 food products (package, price, short why), one feeding sentence, ≤2 cautions. Hygiene: bathing / dental / cleanup (litter, cage, tank or stall) + 2-4 product needs with up to 3 products each (no filler like trash bags). Health: checkup frequency, ≤3 vaccinations (none for species that aren't vaccinated), ≤4 warning signs, ≤3 age-based screenings due now ("like a colonoscopy at 45"), ≤2 upcoming milestones (non-seniors), and condition care per known condition.
+- **Output is deliberately concise** (user feedback: scannable in seconds). Diet: up to 3 food products (package, price, short why), one feeding sentence, ≤2 cautions. Hygiene: bathing / dental / cleanup (litter, cage, tank or stall), each routine carrying its own product needs (2-4 needs in total, up to 3 products each; no filler like trash bags), rendered nested under the routine. Health: checkup frequency, ≤3 vaccinations (none for species that aren't vaccinated), ≤4 warning signs, ≤3 age-based screenings due now ("like a colonoscopy at 45"), ≤2 upcoming milestones (non-seniors), and condition care per known condition.
 - **Product links are Amazon only** (user's choice), built in code as Amazon *searches* for the product name (`amazonSearchUrl`) — the model can't know ASINs, so product-page links would be invented. Cards still render the pre-Sep-27 report shapes (`primary_food`, `supplies`) until a pet is regenerated.
 - **Pet profile feeds every agent**: optional `age_years` and free-text `conditions` (comma-separated, shown as chips). Insurance notes must mention pre-existing-condition handling when conditions exist; the health card says "follow your vet's plan".
 - **Insurance** picks only from `insurance-providers.ts` (Trupanion, Healthy Paws, Embrace, Figo, ASPCA, Nationwide); the enum is filtered to insurers covering the species. Dogs/cats: 3-5 of all six. Rabbit, bird, reptile, hamster: Nationwide only. Horse: ASPCA only. Fish: nobody — the insurance agent is skipped and the card says so.
 - **Materials**: the species' must-haves from `essentials.ts` (e.g. cat: litter box, food, bowls, scratching post, toys, hiding spot, carrier, daily play) are passed to the agent to price, and the card always shows them ("Must-have") plus the agent's extras. Activities (daily play/walks) get no shopping link.
 - **Vision agent** (`vision.ts`) runs before a pet exists, outside the orchestrator. Unsupported animal → exactly "This animal type is not currently supported by this application" (user-specified); no animal → its own message.
 - **Tasks** are derived after each successful category: diet → Feed (daily); hygiene → Bath / Dental care / Cleanup; health → Vet checkup + each screening + "<Condition> vet follow-up". Frequencies are integers (`tasks.frequency_days` is INTEGER); 0 = "not routinely needed" (no task, "As needed" on cards).
-- **Care routine is a live tracker** (user reversed the earlier "no due dates" call on Sep 27): due labels, overdue highlighting, "Mark done" (`completeTaskAction` → `last_done_on` = today, `next_due` = today + frequency), and a month calendar (`care-routine.tsx`, client) projecting non-daily tasks. Tasks are upserted on `(pet_id, category, task_name)` so regenerating keeps history; new tasks start due today. "Today" is America/New_York (`TODAY` in `care-reports.ts`).
+- **Care routine is a live tracker** (user reversed the earlier "no due dates" call on Sep 27): due labels, overdue highlighting, "Mark done" (`completeTaskAction` → `last_done_on` = today, `next_due` = today + frequency), "When did you last do this?" backdating (`setTaskLastDoneAction`), and a month calendar (`care-routine.tsx`, client) on its own screen that projects non-daily tasks only (daily ones are listed, not drawn) and shows last completions struck through. Tasks are upserted on `(pet_id, category, task_name)` so regenerating keeps history; new tasks start due today. "Today" is America/New_York (`TODAY` in `care-reports.ts`).
 
 ## Database
 
-Real data exists (the user's pets "Gibby" (cat) and "Biscuit" (rabbit, with stale old-format reports until regenerated)). **Schema changes are one-off `ALTER` scripts run once**, then mirrored into `schema.sql` — never drop-and-recreate. Changes applied so far: categories `behavior` → `materials`; `pets_species_check` widened to 8 species; `pets.location_label`, `latitude`, `longitude` added; (Sep 27) `pets.age_years`, `pets.conditions`, `tasks.last_done_on`, unique index `tasks_pet_category_name_key`.
+Real data exists (the user's pets "Gibby" (cat) and "Biscuit" (rabbit, with stale old-format reports until regenerated)). **Schema changes are one-off `ALTER` scripts run once**, then mirrored into `schema.sql` — never drop-and-recreate. Changes applied so far: categories `behavior` → `materials`; `pets_species_check` widened to 8, then (Sep 27) 12 species; `pets.location_label`, `latitude`, `longitude` added; (Sep 27) `pets.age_years`, `pets.conditions`, `tasks.last_done_on`, unique index `tasks_pet_category_name_key`, `care_reports.request`.
 
 Tables: `pets` (name, species, breed, age_stage, age_years, conditions, confidence, photo_url as a data: URL, notes, location fields), `care_reports` (category, JSONB content, model), `tasks` (derived: task_name, frequency_days, next_due, last_done_on).
 
 ## UI / design system
 
-Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark = cocoa + apricot; every text pair checked to WCAG AA (4.5:1) — recheck if you change colors. Extra tokens: category tints (`diet`… each with `-soft`) and species tints for all 8 species. Fonts: Nunito (body, `--font-sans`), Fredoka (headings, `--font-display` → `font-heading`, all h1–h3). Theme follows the OS until the header toggle is used (next-themes remembers it). Images (pet photos, profile photos) are stored inline as data: URLs — no object storage, so keep them small (pet photos are resized to ~640px JPEG in the browser). To add a species: mask PNG in `public/silhouettes/`, tint pair in `globals.css` + `SPECIES_TINTS`, and entries in every `Record<Species, …>` (TypeScript will list them), plus widen the DB CHECK.
+Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark = cocoa + apricot; every text pair checked to WCAG AA (4.5:1) — recheck if you change colors. Extra tokens: category tints (`diet`… each with `-soft`) and species tints for all 12 species (new ones contrast-checked Sep 27). Fonts: Nunito (body, `--font-sans`), Fredoka (headings, `--font-display` → `font-heading`, all h1–h3). Theme follows the OS until the header toggle is used (next-themes remembers it). Images (pet photos, profile photos) are stored inline as data: URLs — no object storage, so keep them small (pet photos are resized to ~640px JPEG in the browser). To add a species: mask PNG in `public/silhouettes/`, tint pair in `globals.css` + `SPECIES_TINTS`, and entries in every `Record<Species, …>` (TypeScript will list them), plus widen the DB CHECK, and add it to `HAS_ARTWORK` in `animal-silhouettes.tsx` (species without art render a paw print). Cut masks with `node scripts/cut-silhouettes.mjs <sheet> <species...>` (splits a side-by-side sheet left to right). Guinea pig and chinchilla still need art; raccoon and rat art was sent in chat and needs saving as a file.
 
 ## Deployment
 
@@ -101,9 +102,9 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 
 ## Explicit scope decisions (don't relitigate without asking)
 
-- **No persistent chatbot** — hard Microsoft-challenge requirement (the core is a dashboard). A per-card refine box is the only sanctioned free-text LLM surface (not built).
+- **No persistent chatbot** — hard Microsoft-challenge requirement (the core is a dashboard). The per-card "Adjust" box is the only sanctioned free-text LLM surface (built Sep 27: `refine-report-form.tsx` → `refineCareReportAction` → `refineCategory`; one-shot, the previous card JSON goes in the system prompt, the request in the user message, saved to `care_reports.request` and shown on the card).
 - **Orchestrator stays plain code**, not an LLM router.
-- **Categories locked to the five.** Species are the eight above (the user expanded from dog/cat/rabbit).
+- **Categories locked to the five.** Species are the twelve above (the user expanded from dog/cat/rabbit, then added rodents and raccoon as separate tiles). Raccoons: pet page shows a legality notice; no insurer covers them (Nationwide excludes permit-required species).
 - **Email + password auth only.**
 - **Microchips can't give GPS** (passive RFID) — don't pitch chip tracking; location is user-set per pet. Live tracking would be a future GPS-collar integration.
 - **Mobile = installable web app (PWA)**, not app-store builds (cost/review time). No service worker/offline mode on purpose.
@@ -111,7 +112,7 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 
 ## Current status and next steps
 
-**Done and live:** everything above — auth, 8 species, photo identification, pet photos/edit/remove, profile photo, location + find-nearby, must-haves, redesigned light/dark UI with the user's silhouettes, PWA, DigitalOcean deploy, custom domain.
+**Done and live:** everything above — auth, 12 species, photo identification, pet photos/edit/remove, profile photo, location + find-nearby, must-haves, redesigned light/dark UI with the user's silhouettes, PWA, DigitalOcean deploy, custom domain.
 
 **Not yet verified live:** a full care-plan generation and a photo identification in production with the new key (the user was about to test). Worth testing a fish (no insurers) and a horse (ASPCA only).
 
@@ -121,7 +122,7 @@ Warm, friendly look. Tokens in `globals.css`: light = cream + terracotta, dark =
 3. Devpost writeup — story: 5 specialist Gemini agents in parallel with enforced JSON schemas + a Gemini vision agent + grounded insurer list; dashboard not chatbot (Microsoft); DigitalOcean + GoDaddy prize tracks. A QR code for https://project-gibby.com was generated for the slides.
 4. README refresh — it still says "early scaffold", four categories, dog/cat/rabbit.
 5. Demo video; submit by ~10am for buffer.
-6. Only if time remains: refine box per card, .ics calendar export, ML first-guess. (Checkable tasks: done Sep 27.)
+6. Only if time remains: .ics calendar export, ML first-guess. (Checkable tasks and the per-card refine box: done Sep 27.)
 
 ## Working agreement
 

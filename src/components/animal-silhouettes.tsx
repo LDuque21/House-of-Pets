@@ -1,6 +1,9 @@
 import type { Species } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
+// Species with a mask in public/silhouettes/. Add one here when its art lands.
+const HAS_ARTWORK = new Set<Species>(["dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster"]);
+
 // The user's silhouette artwork, cut into one tight-cropped mask per species
 // (public/silhouettes/<species>.png). Rendered as a CSS mask over
 // currentColor, so each takes whatever text color it's given (theme tokens,
@@ -14,6 +17,14 @@ export function AnimalSilhouette({
   className?: string;
   align?: "bottom" | "center";
 }) {
+  // Species still waiting on artwork get a paw print in the same box.
+  if (!HAS_ARTWORK.has(species)) {
+    return (
+      <span aria-hidden className={cn("inline-grid aspect-square shrink-0 place-items-center", className)}>
+        <PawPrint className="w-[78%]" />
+      </span>
+    );
+  }
   const url = `url(/silhouettes/${species}.png)`;
   const position = align === "center" ? "center" : "center bottom";
   return (
@@ -56,6 +67,10 @@ export const SPECIES_TINTS: Record<Species, { text: string; avatar: string }> = 
   horse: { text: "text-horse", avatar: "bg-horse-soft text-horse" },
   reptile: { text: "text-reptile", avatar: "bg-reptile-soft text-reptile" },
   hamster: { text: "text-hamster", avatar: "bg-hamster-soft text-hamster" },
+  guinea_pig: { text: "text-guinea-pig", avatar: "bg-guinea-pig-soft text-guinea-pig" },
+  rat: { text: "text-rat", avatar: "bg-rat-soft text-rat" },
+  chinchilla: { text: "text-chinchilla", avatar: "bg-chinchilla-soft text-chinchilla" },
+  raccoon: { text: "text-raccoon", avatar: "bg-raccoon-soft text-raccoon" },
 };
 
 // Round avatar: the pet's own photo if they uploaded one, otherwise the

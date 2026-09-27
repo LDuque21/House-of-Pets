@@ -7,8 +7,11 @@ const DOGS_AND_CATS = ["dog", "cat"] as const;
 // Verified current as of the providers' own sites (not hardcoded from memory
 // alone). `species` is what each provider actually insures: all of them cover
 // dogs and cats; Nationwide's avian & exotic plan adds rabbits, birds,
-// reptiles and hamsters; ASPCA adds horses (in a limited set of states). No
-// provider here covers fish -- the orchestrator skips the insurance agent then.
+// reptiles, hamsters, guinea pigs, rats and chinchillas (checked Sep 27 on
+// petinsurance.com/exotics); ASPCA adds horses (in a limited set of states).
+// No provider here covers fish or raccoons (Nationwide excludes species that
+// need a permit or are illegal to own) -- the orchestrator skips the
+// insurance agent then.
 export const INSURANCE_PROVIDERS = {
   trupanion: { name: "Trupanion", url: "https://www.trupanion.com", species: DOGS_AND_CATS },
   healthy_paws: { name: "Healthy Paws", url: "https://www.healthypawspetinsurance.com", species: DOGS_AND_CATS },
@@ -22,7 +25,7 @@ export const INSURANCE_PROVIDERS = {
   nationwide: {
     name: "Nationwide",
     url: "https://www.petinsurance.com",
-    species: ["dog", "cat", "rabbit", "bird", "reptile", "hamster"],
+    species: ["dog", "cat", "rabbit", "bird", "reptile", "hamster", "guinea_pig", "rat", "chinchilla"],
   },
 } as const;
 

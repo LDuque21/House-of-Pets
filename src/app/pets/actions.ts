@@ -15,9 +15,10 @@ import {
   type PetInput,
   type Species,
 } from "@/lib/pets";
-import { buildCareHub, type CategoryResult } from "@/lib/agents/orchestrator";
+import { buildCareHub, refineCategory, type CategoryResult } from "@/lib/agents/orchestrator";
+import type { Category } from "@/lib/agents/schemas";
 import { identifyPet, type Identification } from "@/lib/agents/vision";
-import { completeTaskForUser } from "@/lib/care-reports";
+import { completeTaskForUser, listCareReportsForPet, setTaskLastDoneForUser } from "@/lib/care-reports";
 
 const CONFIDENCES: Confidence[] = ["high", "medium", "low"];
 // Photos are resized in the browser to ~640px JPEG (well under this).
@@ -118,10 +119,47 @@ export async function completeTaskAction(formData: FormData) {
   const taskId = String(formData.get("task_id") ?? "");
   if (!UUID.test(taskId)) throw new Error("Invalid task");
   const petId = await completeTaskForUser(taskId, user.id);
-  if (petId) revalidatePath(`/pets/${petId}`);
+  if (petId) revalidatePet(petId);
 }
 
-export type GenerateCarePlanState ={ results: CategoryResult[] } | null;
+export async function setTaskLastDoneAction(formData: FormData) {
+  const user = await requireUser();
+  const taskId = String(formData.get("task_id") ?? "");
+  const date = String(formData.get("last_done_on") ?? "");
+  if (!UUID.test(taskId) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid task or date");
+  const petId = await setTaskLastDoneForUser(taskId, user.id, date);
+  if (petId) revalidatePet(petId);
+}
+
+// The dashboard shows a routine summary, so both pages change with a task.
+function revalidatePet(petId: string) {
+  revalidatePath(`/pets/${petId}`);
+  revalidatePath(`/pets/${petId}/routine`);
+}
+
+const CATEGORIES: Category[] = ["diet", "hygiene", "health", "insurance", "materials"];
+
+export type RefineResult = { ok: true } | { ok: false; error: string };
+
+// The per-card "Adjust" box: redo one category with the owner's request.
+export async function refineCareReportAction(formData: FormData): Promise<RefineResult> {
+  const user = await requireUser();
+  const petId = String(formData.get("pet_id") ?? "");
+  const category = String(formData.get("category") ?? "") as Category;
+  const request = String(formData.get("request") ?? "").trim().slice(0, 300);
+  if (!CATEGORIES.includes(category)) return { ok: false, error: "Unknown section." };
+  if (request.length < 3) return { ok: false, error: "Tell us what you'd like changed." };
+
+  const pet = UUID.test(petId) ? await getPetForUser(petId, user.id) : null;
+  if (!pet) return { ok: false, error: "Pet not found." };
+  const previous = (await listCareReportsForPet(pet.id)).find((r) => r.category === category);
+
+  const result = await refineCategory(pet, category, { request, previous: previous?.content ?? {} });
+  revalidatePet(pet.id);
+  return result.status === "ok" ? { ok: true } : { ok: false, error: result.error };
+}
+
+export type GenerateCarePlanState = { results: CategoryResult[] } | null;
 
 export async function generateCarePlanAction(
   _prevState: GenerateCarePlanState,
@@ -136,6 +174,6 @@ export async function generateCarePlanAction(
   }
 
   const results = await buildCareHub(pet);
-  revalidatePath(`/pets/${petId}`);
+  revalidatePet(petId);
   return { results };
 }

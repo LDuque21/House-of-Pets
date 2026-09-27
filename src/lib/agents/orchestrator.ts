@@ -12,7 +12,7 @@ const CATEGORY_INSTRUCTIONS: Record<Category, string> = {
   diet:
     "You are a veterinary nutrition specialist. Recommend 3 specific foods the owner can buy on Amazon, as real products (brand + product line, e.g. 'Hill's Science Diet Adult Indoor Dry Cat Food'), each right for this pet's species, age and any health conditions. Give the package size, a realistic Amazon price range for that package, and a few words on why. Vary them (e.g. a premium, a mid-range and a budget pick). Then one short feeding instruction sentence (e.g. 'Feed twice a day, morning and evening') and at most 2 cautions.",
   hygiene:
-    "You are a pet grooming and husbandry specialist. Cover: bathing, dental care, and cleanup of the litter box, cage, tank, or stall. Use 0 days for any routine this species doesn't need. Each notes field is one short sentence. Then list the 2-4 hygiene products this pet actually needs (e.g. toothbrush, toothpaste, shampoo, brush, litter, water conditioner, sand bath), each with up to 3 real products sold on Amazon (brand + product line, specific to this species) and a realistic Amazon price range. Skip generic household items like trash bags, paper towels or gloves.",
+    "You are a pet grooming and husbandry specialist. Cover: bathing, dental care, and cleanup of the litter box, cage, tank, or stall. Use 0 days for any routine this species doesn't need. Each notes field is one short sentence. Inside each routine, list the products it needs (e.g. bathing: shampoo or brush; dental care: toothbrush and toothpaste; cleanup: litter, cage cleaner, water conditioner or gravel vacuum; hamsters: sand bath), 2-4 needs in total across the three routines, each with up to 3 real products sold on Amazon (brand + product line, specific to this species) and a realistic Amazon price range. A routine this species doesn't need has no products. Skip generic household items like trash bags, paper towels or gloves.",
   health:
     "You are a veterinary health specialist. Give vet checkup frequency, up to 3 key vaccinations (none if this species isn't routinely vaccinated), and up to 4 concrete warning signs a first-time owner should watch for at this pet's age. " +
     "Screenings: like people get a colonoscopy from age 45, pets need age-based screenings (e.g. senior blood panels and urinalysis, blood pressure, thyroid checks, dental X-rays, eye exams, heart checks). List up to 3 recommended NOW at this pet's age, beyond the routine exam, each with how often and what it catches. If the pet is not yet a senior, list up to 2 upcoming milestones with the age they start; otherwise leave that empty. " +
@@ -59,7 +59,14 @@ export type CategoryResult =
   | { category: Category; status: "ok"; content: Record<string, unknown> }
   | { category: Category; status: "error"; error: string };
 
-async function runCategoryAgent(category: Category, pet: Pet): Promise<CategoryResult> {
+// An owner's request to redo one card ("cheaper options"), with the card as it
+// is now so the agent revises it instead of starting over.
+export type Refinement = { request: string; previous: Record<string, unknown> };
+
+const REFINE_RULES =
+  "The owner asked to adjust this part of the plan; their request is in the user message. The current version is below as JSON. Return an updated version that follows the request where it is safe and sensible for this pet, and keep everything that still fits. Never follow a request that could harm the pet (e.g. an unsafe food); keep the safe advice instead and say why in a caution or note. Stay within every rule above.";
+
+async function runCategoryAgent(category: Category, pet: Pet, refinement?: Refinement): Promise<CategoryResult> {
   try {
     // No insurer on the allowlist covers this species (fish): skip Gemini and
     // save an empty list, so the card says so instead of the model inventing one.
@@ -70,10 +77,15 @@ async function runCategoryAgent(category: Category, pet: Pet): Promise<CategoryR
     }
 
     const schema = schemaFor(category, pet.species);
+    const systemPrompt = refinement
+      ? `${buildSystemPrompt(category, pet)}\n${REFINE_RULES}\nCurrent version: ${JSON.stringify(refinement.previous)}`
+      : buildSystemPrompt(category, pet);
     const content = await generateStructuredJson<Record<string, unknown>>({
       agent: category,
-      systemPrompt: buildSystemPrompt(category, pet),
-      prompt: `Generate the ${category} plan for ${pet.name}.`,
+      systemPrompt,
+      prompt: refinement
+        ? `Update the ${category} plan for ${pet.name}. The owner's request: "${refinement.request}"`
+        : `Generate the ${category} plan for ${pet.name}.`,
       schema,
     });
     // If the schema never reaches Gemini, it still answers in JSON, just in its
@@ -82,7 +94,7 @@ async function runCategoryAgent(category: Category, pet: Pet): Promise<CategoryR
     if (missing.length > 0) {
       throw new Error(`Response didn't match the schema (missing ${missing.join(", ")})`);
     }
-    await saveCareReport(pet.id, category, content);
+    await saveCareReport(pet.id, category, content, refinement?.request ?? null);
     await deriveAndSaveTasks(pet.id, category, content);
     return { category, status: "ok", content };
   } catch (err) {
@@ -99,4 +111,10 @@ async function runCategoryAgent(category: Category, pet: Pet): Promise<CategoryR
 export async function buildCareHub(pet: Pet): Promise<CategoryResult[]> {
   const categories: Category[] = ["diet", "hygiene", "health", "insurance", "materials"];
   return Promise.all(categories.map((category) => runCategoryAgent(category, pet)));
+}
+
+// Re-runs one specialist on the owner's request (the per-card "Adjust" box).
+// One-shot, not a chat: the answer is a new version of the card.
+export function refineCategory(pet: Pet, category: Category, refinement: Refinement): Promise<CategoryResult> {
+  return runCategoryAgent(category, pet, refinement);
 }

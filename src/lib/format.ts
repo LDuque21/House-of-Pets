@@ -11,6 +11,10 @@ export const SPECIES_LABELS: Record<Species, string> = {
   horse: "Horse",
   reptile: "Reptile",
   hamster: "Hamster",
+  guinea_pig: "Guinea pig",
+  rat: "Rat",
+  chinchilla: "Chinchilla",
+  raccoon: "Raccoon",
 };
 const BABY_LABELS: Record<Species, string> = {
   dog: "Puppy",
@@ -21,6 +25,10 @@ const BABY_LABELS: Record<Species, string> = {
   horse: "Foal",
   reptile: "Hatchling",
   hamster: "Pup",
+  guinea_pig: "Pup",
+  rat: "Pup",
+  chinchilla: "Kit",
+  raccoon: "Kit",
 };
 
 function yearsLabel(years: number | null): string | null {

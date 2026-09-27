@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS pets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL, -- Neon Managed Auth user id (neon_auth.user.id)
   name TEXT NOT NULL,
-  species TEXT NOT NULL CHECK (species IN ('dog', 'cat', 'rabbit', 'fish', 'bird', 'horse', 'reptile', 'hamster')),
+  species TEXT NOT NULL CHECK (species IN ('dog', 'cat', 'rabbit', 'fish', 'bird', 'horse', 'reptile', 'hamster',
+                                           'guinea_pig', 'rat', 'chinchilla', 'raccoon')),
   breed TEXT,
   age_stage TEXT NOT NULL CHECK (age_stage IN ('baby', 'adult', 'senior')),
   confidence TEXT CHECK (confidence IN ('high', 'medium', 'low')),
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS care_reports (
   category TEXT NOT NULL CHECK (category IN ('diet', 'hygiene', 'health', 'insurance', 'materials')),
   generated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   content JSONB NOT NULL,
-  model TEXT NOT NULL
+  model TEXT NOT NULL,
+  request TEXT -- the owner's "adjust this card" request that produced it, if any
 );
 
 CREATE INDEX IF NOT EXISTS care_reports_pet_id_idx ON care_reports(pet_id);

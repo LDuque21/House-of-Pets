@@ -1,16 +1,49 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, HeartPulse, MapPin, Pencil } from "lucide-react";
+import { ArrowRight, CalendarCheck, ChevronLeft, HeartPulse, MapPin, Pencil, TriangleAlert } from "lucide-react";
 import { auth } from "@/lib/auth/server";
 import { getPetForUser } from "@/lib/pets";
-import { listCareReportsForPet, listTasksForPet } from "@/lib/care-reports";
+import { listCareReportsForPet, listTasksForPet, type Task } from "@/lib/care-reports";
 import { CareReportCard } from "@/components/care-report-card";
-import { CareRoutine } from "@/components/care-routine";
 import { GenerateCarePlanForm } from "@/components/generate-care-plan-form";
 import { AnimalSilhouette, PetAvatar } from "@/components/animal-silhouettes";
 import { CATEGORY_ORDER } from "@/components/category-meta";
 import { buttonVariants } from "@/components/ui/button";
 import { conditionList, petSummary } from "@/lib/format";
+
+// A one-line status of the routine, linking to its own screen.
+function RoutineBanner({ petId, tasks }: { petId: string; tasks: Task[] }) {
+  const scheduled = tasks.filter((t) => t.frequency_days > 1);
+  const overdue = scheduled.filter((t) => t.due_in_days < 0).length;
+  const dueToday = scheduled.filter((t) => t.due_in_days === 0).length;
+  const next = scheduled.filter((t) => t.due_in_days > 0).sort((a, b) => a.due_in_days - b.due_in_days)[0];
+  const status = [
+    overdue > 0 && `${overdue} overdue`,
+    dueToday > 0 && `${dueToday} due today`,
+    next && `Next: ${next.task_name}, ${new Date(`${next.next_due}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`,
+  ].filter(Boolean);
+
+  return (
+    <Link
+      href={`/pets/${petId}/routine`}
+      className="mt-6 flex flex-col gap-3 rounded-3xl border border-border bg-card px-5 py-4 shadow-sm transition hover:border-primary/50 sm:flex-row sm:items-center"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
+        <CalendarCheck className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-heading text-lg font-semibold">Care routine and calendar</span>
+        <span className={overdue > 0 ? "text-sm font-semibold text-destructive" : "text-sm text-muted-foreground"}>
+          {tasks.length === 0 ? "Routines from the plan show up here." : status.join(" · ") || "All caught up."}
+        </span>
+      </span>
+      <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+        Open
+        <ArrowRight className="size-4" />
+      </span>
+    </Link>
+  );
+}
 
 export default async function PetPage({
   params,
@@ -24,7 +57,7 @@ export default async function PetPage({
   const pet = await getPetForUser(id, user.id);
   if (!pet) notFound();
 
-  const [reports, { tasks, today }] = await Promise.all([
+  const [reports, { tasks }] = await Promise.all([
     listCareReportsForPet(pet.id),
     listTasksForPet(pet.id),
   ]);
@@ -33,7 +66,7 @@ export default async function PetPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 xl:max-w-[1760px]">
       <Link
         href="/pets"
         className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
@@ -68,6 +101,13 @@ export default async function PetPage({
               </ul>
             )}
             {pet.notes && <p className="mt-3 max-w-2xl text-sm">{pet.notes}</p>}
+            {pet.species === "raccoon" && (
+              <p className="mt-3 flex max-w-2xl items-start gap-2 rounded-2xl bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-primary" />
+                Keeping a raccoon is illegal in many US states and needs a permit in others. Check your state and
+                local laws, and find an exotics vet who will see raccoons.
+              </p>
+            )}
           </div>
           <Link
             href={`/pets/${pet.id}/edit`}
@@ -92,19 +132,18 @@ export default async function PetPage({
           </p>
         </div>
       ) : (
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <section>
+        <>
+          <RoutineBanner petId={pet.id} tasks={tasks} />
+          <section className="mt-8">
             <h2 className="text-2xl font-semibold">{pet.name}&apos;s care plan</h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {/* Wide screens: the five specialists side by side. */}
+            <div className="mt-4 grid items-start gap-4 md:grid-cols-2 xl:grid-cols-5">
               {orderedReports.map((report) => (
                 <CareReportCard key={report.category} report={report} pet={pet} />
               ))}
             </div>
           </section>
-          <aside className="lg:self-start">
-            <CareRoutine tasks={tasks} today={today} />
-          </aside>
-        </div>
+        </>
       )}
     </div>
   );

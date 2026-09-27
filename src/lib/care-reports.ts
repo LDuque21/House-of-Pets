@@ -9,18 +9,20 @@ export type CareReport = {
   generated_at: string;
   content: Record<string, unknown>;
   model: string;
+  request: string | null;
 };
 
 export async function saveCareReport(
   petId: string,
   category: Category,
-  content: object
+  content: object,
+  request: string | null = null
 ): Promise<CareReport> {
   const { rows } = await pool.query<CareReport>(
-    `INSERT INTO care_reports (pet_id, category, content, model)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO care_reports (pet_id, category, content, model, request)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [petId, category, JSON.stringify(content), GEMINI_MODEL]
+    [petId, category, JSON.stringify(content), GEMINI_MODEL, request]
   );
   return rows[0];
 }
@@ -152,6 +154,20 @@ export async function completeTaskForUser(taskId: string, userId: string): Promi
      WHERE t.id = $1 AND t.pet_id = p.id AND p.user_id = $2
      RETURNING t.pet_id`,
     [taskId, userId]
+  );
+  return rows[0]?.pet_id ?? null;
+}
+
+// Backdates a task ("I last did this on the 3rd") and schedules the next one
+// from then. Refuses future dates and anything over ten years back.
+export async function setTaskLastDoneForUser(taskId: string, userId: string, date: string): Promise<string | null> {
+  const { rows } = await pool.query<{ pet_id: string }>(
+    `UPDATE tasks t SET last_done_on = $3::date, next_due = $3::date + t.frequency_days
+     FROM pets p
+     WHERE t.id = $1 AND t.pet_id = p.id AND p.user_id = $2
+       AND $3::date <= ${TODAY} AND $3::date > ${TODAY} - 3650
+     RETURNING t.pet_id`,
+    [taskId, userId, date]
   );
   return rows[0]?.pet_id ?? null;
 }
