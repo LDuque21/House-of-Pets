@@ -2,7 +2,9 @@ import type { Species } from "@/lib/pets";
 import { cn } from "@/lib/utils";
 
 // Species with a mask in public/silhouettes/. Add one here when its art lands.
-const HAS_ARTWORK = new Set<Species>(["dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster"]);
+const HAS_ARTWORK = new Set<Species>([
+  "dog", "cat", "rabbit", "fish", "bird", "horse", "reptile", "hamster", "guinea_pig", "rat", "chinchilla", "raccoon",
+]);
 
 // The user's silhouette artwork, cut into one tight-cropped mask per species
 // (public/silhouettes/<species>.png). Rendered as a CSS mask over
